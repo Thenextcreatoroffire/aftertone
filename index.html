@@ -1089,14 +1089,13 @@ function enterDay(day, P, mode = 'cinema'){
   exitDay(); stopSoundtrack(); stopAmbient(); if ("speechSynthesis" in window) speechSynthesis.cancel(); $$("audio").forEach(a => a.pause());
   const el = document.createElement('div'); el.className = 'imm';
   el.innerHTML = `<canvas></canvas><div class="imm-top"><button class="ibtn" data-a="x" aria-label="Выйти">${ms('close')}</button>
-    <div class="imm-btns"><button class="chip" data-a="cinema">Кино</button><button class="chip" data-a="360">360°</button><button class="chip" data-a="vr">VR</button><button class="ibtn" data-a="snd" aria-label="Звук">${ms('volume_up')}</button></div></div>
+    <div class="imm-btns"><button class="ibtn" data-a="snd" aria-label="Звук">${ms('volume_up')}</button></div></div>
     <div class="imm-cap"><div class="lb-sm up" style="opacity:.8">${fmtLong(day.date)}</div><div class="imm-title">${esc(day.title)}</div><div class="hand" style="color:#fff;opacity:.9">${esc(day.caption)}</div></div>
     <div class="imm-hint" hidden></div>`;
   document.body.appendChild(el); document.body.style.overflow = 'hidden';
   const cv = $('canvas', el), x = cv.getContext('2d'), dpr = Math.min(2, window.devicePixelRatio || 1);
   const size = () => { cv.width = innerWidth*dpr; cv.height = innerHeight*dpr; }; size(); addEventListener('resize', size);
   const st = { mode, yaw: 0, pitch: 0, ty: 0, tp: 0, gyro: false, pano: makePano(P.photos[0]), pt: particlesFor(day), muted: false, t0: performance.now(), last: performance.now(), alive: true, base: null };
-  aiPano(day).then(im => { if (im && st.alive) st.pano = makePano(im); });
   const hint = $('.imm-hint', el), cap = $('.imm-cap', el);
   const setMode = async m => {
     st.mode = m; $$('.imm-btns .chip', el).forEach(c => c.classList.toggle('on', c.dataset.a === m)); el.classList.toggle('vr', m === 'vr');
@@ -1114,10 +1113,9 @@ function enterDay(day, P, mode = 'cinema'){
     if (st.base == null) st.base = yaw - st.ty;
     st.ty = yaw - st.base; st.tp = clamp(pitch, -35, 35);
   };
-  addEventListener('deviceorientation', onOri);
   let drag = null;
   cv.onpointerdown = e => { drag = {x: e.clientX, y: e.clientY, yaw: st.ty, pitch: st.tp}; cv.setPointerCapture(e.pointerId); };
-  cv.onpointermove = e => { if (!drag) return; st.ty = drag.yaw - (e.clientX - drag.x)*0.25; st.tp = clamp(drag.pitch + (e.clientY - drag.y)*0.15, -35, 35); if (st.mode === 'cinema') setMode('360'); };
+  cv.onpointermove = () => {};
   cv.onpointerup = () => { drag = null; };
   // звук: песня (фрагмент) или саундтрек + звук места, через 5 с — голос
   let song = null;
@@ -1492,7 +1490,7 @@ async function viewDay(id){
   app.innerHTML = `<div class="stack fade-in">
     <section><p class="lb-sm up mut">${fmtLong(day.date).toUpperCase()} • ПАПКА № ${num}</p><h1 class="h-dl" style="margin-top:8px">${esc(day.title)}</h1><p class="hand" style="margin-top:8px">${esc(day.caption)}</p></section>
     <div class="poster"><canvas id="pc" width="1080" height="1350" aria-label="Воспоминание дня: ${esc(day.title)}"></canvas></div>
-    <div class="enter"><button class="btn" id="bEnter">${ms('play_circle', 1)}Войти в день</button><button class="btn sec" id="b360">${ms('360')}360° / VR</button></div>
+    <button class="btn w" id="bEnter">${ms('play_circle', 1)}Войти в день</button>
     <div class="player"><div class="row"><div class="row" style="gap:12px;justify-content:flex-start;min-width:0"><button class="ibtn solid" id="bMusic" aria-label="Включить звук дня"><span class="ms f">play_arrow</span></button>
         <div style="min-width:0"><div class="h-sm trunc">${sUrl || m.embed ? esc(m.label) : 'Саундтрек дня'}</div><div class="lb-md mut trunc">${sUrl ? (day.hasClip && !sessionFull.has(day.id) ? 'ваш трек • фрагмент 60 с' : 'ваш трек') : m.embed ? esc(m.service) : 'по мотивам: ' + esc(m.label)} • ${day.vibe.music.bpm} bpm${day.vibe.music.minor === true ? ' • минор' : day.vibe.music.minor === false ? ' • мажор' : ''}</div></div></div>
         <div style="display:flex"><button class="ibtn" id="bSynth" aria-label="Сгенерированный звук дня" title="Звук дня">${ms('graphic_eq')}</button><button class="ibtn" id="bVoice" aria-label="Озвучка описания">${ms('record_voice_over')}</button></div></div>
@@ -1555,7 +1553,6 @@ async function viewDay(id){
     else { if (SOUND && SOUND.day === day.id){ stopSoundtrack(); $('#bMusic').innerHTML = ms('play_arrow', 1); } else { startSoundtrack(day); $('#bMusic').innerHTML = ms('pause', 1); } }
   };
   $('#bEnter').onclick = () => enterDay(day, P, 'cinema');
-  $('#b360').onclick = () => enterDay(day, P, '360');
   $('#bVoice').onclick = () => speak(day, on => { $('#bVoice').innerHTML = ms(on ? 'stop_circle' : 'record_voice_over'); });
   const fillVoices = () => { const vs = ruVoices(), cur = pickVoice(); const sel = $('#voiceSel'); if (!sel) return; sel.innerHTML = vs.length ? vs.map(v => `<option ${cur && v.name === cur.name ? 'selected' : ''}>${esc(v.name)}</option>`).join('') : '<option>голос браузера</option>'; };
   fillVoices(); if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = fillVoices;
