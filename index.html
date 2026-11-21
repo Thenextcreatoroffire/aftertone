@@ -147,6 +147,10 @@ select.field{appearance:auto;cursor:pointer}
 .tile.ghost{background:var(--lowest);color:var(--outline);font-weight:400}
 .tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .tile.zoom{padding:0;border:0;cursor:zoom-in}
+.orig{margin-top:14px;padding:12px 14px;border-left:3px solid var(--aura);background:color-mix(in oklab,var(--aura) 8%,transparent);border-radius:0 12px 12px 0}
+.orig p{margin-top:6px;color:var(--on);white-space:pre-wrap}
+.orig p.clamp{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.orig button{margin-top:6px;color:var(--aura);display:inline-flex;align-items:center;gap:2px;padding:0}
 .mood-pick{margin-top:12px;background:var(--low);border-radius:16px;padding:14px}
 .tile .zi{position:absolute;right:8px;bottom:8px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center}
 .lbox{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;touch-action:pan-y pinch-zoom}
@@ -2094,7 +2098,7 @@ async function viewDay(id){
       <div class="bento" style="margin:12px 0" id="seen"></div><ul class="rules" id="rules"></ul></section>
     <section class="card"><div class="h-sm" style="margin-bottom:8px">Папка дня</div><div class="files" id="files"></div></section>
     <section class="card"><div class="h-sm" style="margin-bottom:8px">Описание дня</div><p class="quote">${esc(day.description)}</p>
-      <details><summary>Исходная запись</summary><p class="b-sm" style="margin-top:8px">${esc(day.text)}</p></details></section>
+      <div class="orig"><div class="lb-sm up out" style="display:flex;align-items:center;gap:6px">${ms('edit_note')}Ваша запись</div><p class="b-sm${day.text.length > 220 ? ' clamp' : ''}" id="origT">${esc(day.text)}</p>${day.text.length > 220 ? `<button class="lb-md" id="origMore" aria-expanded="false">Показать полностью ${ms('expand_more')}</button>` : ''}</div></section>
     <section class="card"><div class="row" style="margin-bottom:10px"><span class="h-sm">Фото дня</span><span class="lb-md out">на картине — полароидом</span></div><div class="tiles" id="phs"></div></section>
     <div class="row">${prev ? `<a class="lb-md mut trunc" href="#/day/${prev.id}">← ${esc(prev.title)}</a>` : '<span></span>'}${next ? `<a class="lb-md mut trunc" href="#/day/${next.id}" style="text-align:right">${esc(next.title)} →</a>` : ''}</div>
     <p class="disc">Настроение дня — художественная интерпретация записи, а не психологическая оценка.</p>
@@ -2141,6 +2145,7 @@ async function viewDay(id){
   $$('#phs .zoom').forEach(b => b.onclick = () => openPhotos(P.raw, +b.dataset.k, day.title));
   const png = () => c.toBlob(b => { if (b){ saveBlob(b, day.title + '.png'); toast('Картинка сохранена — проверьте загрузки'); } else toast('Не удалось сохранить картинку'); }, 'image/png');
   $('#bPng').onclick = png;
+  if ($('#origMore')) $('#origMore').onclick = () => { const t = $('#origT'), open = t.classList.toggle('clamp') === false; $('#origMore').setAttribute('aria-expanded', open); $('#origMore').innerHTML = (open ? 'Свернуть ' : 'Показать полностью ') + ms(open ? 'expand_less' : 'expand_more'); };
   $('#moodBtn').onclick = () => { const pk = $('#moodPick'), open = pk.hidden; pk.hidden = !open; $('#moodBtn').setAttribute('aria-expanded', open); };
   $$('#moodPick [data-mood]').forEach(b => b.onclick = async () => { const y = scrollY; setMood(day, b.dataset.mood || null); await route(curPath); scrollTo(0, y); toast(b.dataset.mood ? `Настроение дня: ${b.dataset.mood}. Оформление перестроено.` : 'Вернул настроение, которое определила система'); });
   $('#bVid').onclick = e => makeVideo(day, P, c, e.currentTarget);
