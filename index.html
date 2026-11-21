@@ -394,26 +394,54 @@ const ADJ = { autumn:['Осенний','Осенняя','Осеннее','Осе
   tension:['Нервный','Нервная','Нервное','Нервные'], joy:['Шумный','Шумная','Шумное','Шумные'], quiet:['Тихий','Тихая','Тихое','Тихие'], warm:['Тёплый','Тёплая','Тёплое','Тёплые'] };
 const GI = {m:0, f:1, n:2, p:3, home:0};
 const TOD_NOUN = { night:['Ночь','f'], evening:['Вечер','m'], morning:['Утро','n'] };
+const ACTS = [
+  ['бал(?:а|у|ом|е|ы)?(?![а-я])|вальс', 'adj', 'бал', 'm', 'вальс, музыка и свет люстр'],
+  ['театр|спектакл|балет|опер(?:а|у|е|ы)(?![а-я])', 'phrase', 'Вечер в театре', '', 'тишина зала перед началом'],
+  ['музе|выставк|галере', 'phrase', 'День в музее', '', 'тихие залы и картины'],
+  ['кино(?![а-я])|кинотеатр|фильм', 'phrase', 'Вечер кино', '', 'фильм, от которого не оторваться'],
+  ['каток|катк|коньк', 'adj', 'каток', 'm', 'скрип льда под коньками'],
+  ['пикник', 'adj', 'пикник', 'm', 'плед на траве'],
+  ['гуля|прогул', 'adj', 'прогулка', 'f', 'долгая прогулка без цели'],
+  ['тренир|зал(?![а-я])|спортзал|пробежк|бегал', 'adj', 'тренировка', 'f', 'приятная усталость в мышцах'],
+  ['учил|учеб|учёб|пары(?![а-я])|лекци|конспект|домашк|урок', 'adj', 'учёба', 'f', 'конспекты, чай и сосредоточенность'],
+  ['танцев|танцы|танцевал', 'adj', 'танцы', 'p', 'музыка, под которую невозможно стоять'],
+  ['ужин', 'adj', 'ужин', 'm', 'тёплый ужин и разговоры'],
+  ['завтрак', 'adj', 'завтрак', 'm', 'неспешный завтрак'],
+  ['читал|книг|роман(?![а-я])', 'adj', 'чтение', 'n', 'страницы, которые не хотелось закрывать'],
+  ['сериал', 'adj', 'сериалы', 'p', 'серия за серией'],
+  ['играли|игр(?:ы|а|у)(?![а-я])|настолк', 'adj', 'игры', 'p', 'смех над настольными играми'],
+  ['рисова|рисунк|рисовал', 'adj', 'рисование', 'n', 'краски на пальцах'],
+];
+function moodShortOf(A, s){ return s.tension > 0.6 ? 'Напряжение' : (s.energy > 0.65 && s.warmth > 0.5) ? 'Радость' : A.nostalgia ? 'Ностальгия' : (s.sadness || 0) > 0.25 ? 'Грусть' : (s.energy < 0.42 && s.warmth > 0.55) ? 'Тепло' : s.energy < 0.42 ? 'Тишина' : 'Вдохновение'; }
+const WEATHER_PH = { rain:'под шум дождя', snow:'под падающим снегом', fog:'в тумане' };
+const MOOD_TAIL = { 'Тепло':'и тепло', 'Напряжение':'на пределе', 'Радость':'и много смеха', 'Грусть':'и немного грусти', 'Ностальгия':'и воспоминания', 'Тишина':'и тишина', 'Вдохновение':'и вдохновение' };
 function topicOf(A){
   const t = A.raw, find = (list) => list.find(e => has(t, e[0]));
-  return { place: find(PLACES2), things: THINGS2.filter(e => has(t, e[0])), comp: find(COMP2), event: EVENTS.find(e => t.includes(e[0])), before: BEFORE.find(e => has(t, e[0])), weather: weatherOf(t), firstSnow: t.includes('первый снег') };
+  return { act: ACTS.find(e => has(t, e[0])), place: find(PLACES2), things: THINGS2.filter(e => has(t, e[0])), comp: find(COMP2), event: EVENTS.find(e => t.includes(e[0])), before: BEFORE.find(e => has(t, e[0])), weather: weatherOf(t), firstSnow: t.includes('первый снег') };
 }
 function moodAdj(s){ return s.tension > 0.6 ? 'tension' : s.energy > 0.65 ? 'joy' : s.warmth > 0.6 ? 'warm' : 'quiet'; }
 function makeTitle(A, scales){
-  const s = scales || A.scales, o = topicOf(A), thing = o.things.find(x => !(o.place && o.place[1].slice(0, 4) === x[1].slice(0, 4))), cap = x => x.charAt(0).toUpperCase() + x.slice(1);
+  const s = scales || A.scales, o = topicOf(A), thing = o.things.find(x => !(o.place && o.place[1].slice(0, 4) === x[1].slice(0, 4)) && !(o.act && has(x[1], o.act[0]))), cap = x => x.charAt(0).toUpperCase() + x.slice(1);
   let title;
   if (o.firstSnow) title = 'Первый снег' + (thing && thing[1] !== 'листья' ? ' и ' + thing[1] : o.place ? ' ' + o.place[3] : A.tod ? ' ' + {night:'ночью', evening:'вечером', morning:'утром'}[A.tod] : ' за окном');
   else if (o.before){ const tn = TOD_NOUN[A.tod] || ['День']; title = `${tn[0]} ${o.place ? o.place[3] + ' ' : ''}${o.before[1]}`; }
   else if (o.event) title = o.event[1] + (o.place && o.place[2] !== 'home' ? ' ' + o.place[3] : o.comp ? ' ' + o.comp[1] : thing ? ' и ' + thing[1] : A.season ? ' ' + {autumn:'осенью', winter:'зимой', spring:'весной', summer:'летом'}[A.season] : '');
+  else if (o.act && o.act[1] === 'phrase') title = o.act[2] + (o.comp ? ' ' + o.comp[1] : A.season ? ' ' + {autumn:'осенью', winter:'зимой', spring:'весной', summer:'летом'}[A.season] : thing ? ' и ' + thing[1] : '');
   else if (o.place && o.place[2] !== 'home'){
-    const set = ADJ[A.season] || ADJ[o.weather] || ADJ[A.tod] || ADJ[moodAdj(s)];
-    title = `${set[GI[o.place[2]]]} ${o.place[1]}` + (thing ? ' и ' + thing[1] : o.comp ? ' ' + o.comp[1] : '');
+    const set = ADJ[A.season] || ADJ[o.weather] || ADJ[A.tod];
+    const head = set ? `${set[GI[o.place[2]]]} ${o.place[1]}` : o.place[1].charAt(0).toUpperCase() + o.place[1].slice(1);
+    title = head + (set ? (thing ? ' и ' + thing[1] : o.comp ? ' ' + o.comp[1] : '') : (o.comp ? ' ' + o.comp[1] : thing ? ' и ' + thing[1] : ''));
+  } else if (o.act){
+    const moodOk = ['ужин','завтрак','игры','танцы','прогулка'].includes(o.act[2]);
+    const set = ADJ[A.season] || ADJ[o.weather] || (o.act[2] === 'ужин' || o.act[2] === 'завтрак' ? null : ADJ[A.tod]) || (moodOk ? ADJ[moodAdj(s)] : null);
+    const head = set ? `${set[GI[o.act[3]]]} ${o.act[2]}` : o.act[2].charAt(0).toUpperCase() + o.act[2].slice(1);
+    title = (!o.comp && !thing && o.weather) ? o.act[2].charAt(0).toUpperCase() + o.act[2].slice(1) + ' ' + WEATHER_PH[o.weather] : head + (o.place ? ' дома' : '') + (o.comp ? ' ' + o.comp[1] : thing ? ' и ' + thing[1] : '');
   } else {
     const tn = TOD_NOUN[A.tod] || ['день', 'm'], set = ADJ[o.weather] || ADJ[A.season] || ADJ[moodAdj(s)];
-    title = `${set[GI[tn[1]]]} ${tn[0].toLowerCase()}` + (o.place ? ' дома' : '') + (o.place && o.comp ? ' ' + o.comp[1] : thing ? ' и ' + thing[1] : o.comp ? ' ' + o.comp[1] : '');
+    if (o.weather && !thing && !o.comp && !o.place) title = `${tn[0].charAt(0).toUpperCase() + tn[0].slice(1)} ${WEATHER_PH[o.weather]}`; else title = `${set[GI[tn[1]]]} ${tn[0].toLowerCase()}` + (o.place ? ' дома' : '') + (o.place && o.comp ? ' ' + o.comp[1] : thing ? ' и ' + thing[1] : o.comp ? ' ' + o.comp[1] : '');
   }
   let w = title.split(' ');
-  if (w.length < 3) w = w.concat((A.tod === 'night' ? 'этой ночью' : A.tod === 'evening' ? 'этим вечером' : A.tod === 'morning' ? 'этим утром' : 'в этот день').split(' '));
+  if (w.length < 3){ const ms0 = moodShortOf(A, s); let tail = MOOD_TAIL[ms0]; if (/^(Тих|Шумн|Тёпл|Нервн)/.test(w[0])) tail = { 'Тишина':'без спешки', 'Тепло':'и уют', 'Напряжение':'без передышки', 'Радость':'и много смеха' }[ms0] || tail; w = w.concat(tail.split(' ')); }
   return cap(w.slice(0, 7).join(' '));
 }
 const OPEN = {
@@ -428,7 +456,7 @@ function makeStory(A, v, seed){
   const o = topicOf(A), R = mulberry32(seed || 1), pick = a => a[Math.floor(R() * a.length)], cap = x => x.charAt(0).toUpperCase() + x.slice(1);
   const key = o.firstSnow ? 'firstSnow' : o.weather || (sceneKind(A.raw) === 'party' ? 'party' : null) || A.season || A.tod || 'day';
   const parts = [pick(OPEN[key])];
-  const det = [o.place ? o.place[3] : null, o.comp ? o.comp[2] : null, ...o.things.slice(0, 2).map(x => x[2])].filter(Boolean);
+  const det = [o.place ? o.place[3] : null, o.comp ? o.comp[2] : null, o.act ? o.act[4] : null, ...o.things.slice(0, o.act ? 1 : 2).map(x => x[2])].filter(Boolean);
   if (det.length) parts.push(cap(det.join(', ')) + '.');
   const contrast = v.textInfo.hits.cold.length && v.textInfo.hits.warm.length;
   if (contrast) parts.push('Снаружи было холодно, а внутри — тепло.');
@@ -726,7 +754,7 @@ async function seedDemo(){
     const photos = [0,1,2].map(k => scene(d.scene, k + 1));
     const music = musicFromLink(d.music.url, d.music.label, d.music.tempo, d.music.mode);
     const { vibe, title, caption, description } = await buildVibe(d.text, photos, music);
-    DAYS.push({ id:d.id, demo:true, scene:d.scene, date:d.date, createdAt:i, text:d.text, photos:[], music, vibe, title, caption, description, v2:1, rev:0 });
+    DAYS.push({ id:d.id, demo:true, scene:d.scene, date:d.date, createdAt:i, text:d.text, photos:[], music, vibe, title, caption, description, v2:1, v3:1, rev:0 });
   }
   save();
 }
@@ -1595,7 +1623,7 @@ async function createDay(input){
     const { vibe, title, caption, description } = await buildVibe(input.text, imgs, music);
     b.say('Рисую картину дня');
     const id = 'd' + Date.now().toString(36);
-    const day = { id, date: input.date, createdAt: Date.now(), text: input.text, photos, music, vibe, title, caption, description, v2: 1, rev: 0 };
+    const day = { id, date: input.date, createdAt: Date.now(), text: input.text, photos, music, vibe, title, caption, description, v2: 1, v3: 1, rev: 0 };
     if (input.audio){ b.say('Сохраняю фрагмент песни'); try { await ADB.put(id, await makeClip(input.audio)); day.hasClip = true; } catch (e) { console.warn(e); } }
     if (IMAGE_ENDPOINT) b.say('Нейросеть рисует день');
     const aiImg = await generateAIImage(day); if (aiImg) day.art = [aiImg];
@@ -1843,6 +1871,7 @@ async function route(hash){
   const stored = load();
   if (stored && stored.length) DAYS = stored; else await seedDemo();
   let migrated = false;
+  for (const d of DAYS) if (!d.v3){ const A = analyzeText(d.text); d.title = makeTitle(A, d.vibe.scales); const st = makeStory(A, d.vibe, hashStr(d.text)); d.description = st.description; d.caption = st.caption; d.v2 = d.v3 = 1; d.rev++; migrated = true; }
   for (const d of DAYS) if (!d.v2){ const A = analyzeText(d.text); Object.assign(d.vibe.textInfo, { scene: sceneKind(A.raw), weather: weatherOf(A.raw), tod: A.tod, season: A.season }); d.title = makeTitle(A, d.vibe.scales); const st = makeStory(A, d.vibe, hashStr(d.text)); d.description = st.description; d.caption = st.caption; d.v2 = 1; d.rev++; migrated = true; }
   for (const d of DAYS){ const th = themeFromVibe(d.vibe); const sw = { bg: th.bg, accent: th.accent, ink: th.ink, onAccent: contrast(th.accent, '#111111') > 6 ? '#111111' : '#f4efe6' }; if (JSON.stringify(sw) !== JSON.stringify(d.vibe.swatch)){ d.vibe.swatch = sw; migrated = true; } }
   if (migrated) save();
