@@ -1,6 +1,6 @@
 // Cloudflare Worker для Aftertone: атмосферная картинка дня (Workers AI, бесплатный лимит).
 // 1) Текстовая модель превращает запись дня (на любом языке) в подробное описание сцены на английском.
-// 2) FLUX.2 [klein] 9B рисует картинку по описанию, опираясь на настоящее фото дня (если оно пришло).
+// 2) FLUX.2 [klein] 9B рисует картинку (или широкую панораму для режима 360°, если пришло pano: true) по описанию, опираясь на настоящее фото дня (если оно пришло).
 //    Если эта модель недоступна или лимит исчерпан — запасной вариант FLUX.1 schnell.
 // Нужна привязка Workers AI с именем переменной AI (Settings → Bindings → Workers AI).
 
@@ -42,20 +42,21 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
     if (request.method !== 'POST') return Response.json({ error: 'Only POST' }, { status: 405, headers: cors });
     try {
-      const { prompt, text, style, photo } = await request.json();
+      const { prompt, text, style, photo, pano } = await request.json();
       if (typeof prompt !== 'string' || !prompt.trim()) return Response.json({ error: 'Bad prompt' }, { status: 400, headers: cors });
 
       const scene = (typeof text === 'string' && text.trim()) ? await writeScene(env, text) : null;
       let finalPrompt = (scene || prompt) + (style ? ', ' + style : '');
       if (photo) finalPrompt += ', keep the place, light and composition of the reference photo, recreate its atmosphere';
+      if (pano) finalPrompt = 'ultra-wide panoramic view of the whole surroundings, horizon in the middle, continuous scene from left to right, ' + finalPrompt;
       finalPrompt = finalPrompt.slice(0, 2000);
 
       // Основная модель: FLUX.2 [klein] 9B с опорой на фото дня
       try {
         const form = new FormData();
         form.append('prompt', finalPrompt);
-        form.append('width', '1024');
-        form.append('height', '768');
+        form.append('width', pano ? '1920' : '1024');
+        form.append('height', pano ? '768' : '768');
         if (typeof photo === 'string' && photo.startsWith('data:image')) form.append('input_image_0', dataUrlToBlob(photo), 'photo.jpg');
         const wrapped = new Response(form);
         const out = await env.AI.run('@cf/black-forest-labs/flux-2-klein-9b', {

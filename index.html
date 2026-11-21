@@ -185,6 +185,18 @@ details summary::-webkit-details-marker{display:none}
 .toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:var(--high);border:1px solid var(--outv);color:var(--on);padding:12px 16px;border-radius:12px;font:500 13px/18px var(--body);z-index:70;width:min(520px,90vw)}
 .disc{font:400 12px/16px var(--body);color:var(--outline);margin:0}
 details.acc{background:var(--low);border-radius:16px}
+.imm{position:fixed;inset:0;z-index:90;background:#000;color:#fff;touch-action:none}
+.imm canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.imm-top{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:12px 12px;padding-top:max(12px,env(safe-area-inset-top));background:linear-gradient(rgba(0,0,0,.45),transparent);z-index:2}
+.imm-top .ibtn{color:#fff;background:rgba(0,0,0,.35);backdrop-filter:blur(10px)}
+.imm-btns{display:flex;gap:6px;align-items:center}
+.imm .chip{background:rgba(0,0,0,.35);color:#fff;backdrop-filter:blur(10px);height:32px}
+.imm .chip.on{background:#fff;color:#000}
+.imm-cap{position:absolute;left:20px;right:20px;bottom:max(32px,env(safe-area-inset-bottom));z-index:2;pointer-events:none;transition:opacity .6s}
+.imm-title{font:700 clamp(28px,6vw,48px)/1.08 var(--head);margin:6px 0 8px;text-shadow:0 2px 20px rgba(0,0,0,.4)}
+.imm-hint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.55);backdrop-filter:blur(10px);padding:12px 18px;border-radius:12px;font:500 14px var(--body);z-index:2;text-align:center;max-width:80vw}
+.imm.vr .imm-top{opacity:.35}
+.enter{display:grid;grid-template-columns:1fr auto;gap:10px}
 details.acc>summary{list-style:none;cursor:pointer;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;user-select:none;border-radius:16px}
 details.acc>summary::-webkit-details-marker{display:none}
 details.acc>summary:hover{background:var(--cont)}
@@ -873,7 +885,6 @@ function startSoundtrack(day){
   const tone = (f, t0, dur, type, g, att = 0.02, out = lp) => { const o = ac.createOscillator(), e = ac.createGain(); o.type = type; o.frequency.value = f; e.gain.setValueAtTime(0, t0); e.gain.linearRampToValueAtTime(g, t0 + att); e.gain.exponentialRampToValueAtTime(0.0001, t0 + dur); o.connect(e); e.connect(out); o.start(t0); o.stop(t0 + dur + 0.05); };
   const kick = t0 => { const o = ac.createOscillator(), e = ac.createGain(); o.frequency.setValueAtTime(120, t0); o.frequency.exponentialRampToValueAtTime(42, t0 + 0.25); e.gain.setValueAtTime(0.5, t0); e.gain.exponentialRampToValueAtTime(0.001, t0 + 0.3); o.connect(e); e.connect(master); o.start(t0); o.stop(t0 + 0.32); };
   const hat = t0 => { const n = ac.createBufferSource(), f = ac.createBiquadFilter(), e = ac.createGain(); n.buffer = nb; f.type = 'highpass'; f.frequency.value = 7000; e.gain.setValueAtTime(0.06, t0); e.gain.exponentialRampToValueAtTime(0.001, t0 + 0.06); n.connect(f); f.connect(e); e.connect(master); n.start(t0, Math.random()); n.stop(t0 + 0.08); };
-  if (T.weather === 'rain' || T.weather === 'snow' || tech === 'minimal'){ const n = ac.createBufferSource(), f = ac.createBiquadFilter(), e = ac.createGain(); n.buffer = nb; n.loop = true; f.type = T.weather === 'rain' ? 'bandpass' : 'lowpass'; f.frequency.value = T.weather === 'rain' ? 1400 : 500; e.gain.value = T.weather === 'rain' ? 0.06 : 0.03; n.connect(f); f.connect(e); e.connect(master); n.start(); extra.push(n); }
   let step = 0, next = ac.currentTime + 0.1; const pluck = tech === 'kandinsky' ? 'square' : tech === 'riso' ? 'sawtooth' : 'triangle';
   const tick = () => {
     while (next < ac.currentTime + 0.25){
@@ -1001,6 +1012,154 @@ function mediaFor(day){
   return out;
 }
 
+/* ---------- живой звук места ---------- */
+let AMB = null;
+function stopAmbient(){ if (AMB){ AMB.stop(); AMB = null; } }
+function startAmbient(day){
+  stopAmbient(); const ac = audioCtx(); ac.resume();
+  const T = day.vibe.textInfo, sc = T.scene, w = T.weather, nb = noiseBuf(ac), out = ac.createGain(), nodes = [], timers = [];
+  out.gain.setValueAtTime(0, ac.currentTime); out.gain.linearRampToValueAtTime(1, ac.currentTime + 2.5); out.connect(BUS);
+  const noise = (type, freq, gain, q = 0.7) => { const n = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(); n.buffer = nb; n.loop = true; f.type = type; f.frequency.value = freq; f.Q.value = q; g.gain.value = gain; n.connect(f); f.connect(g); g.connect(out); n.start(0, Math.random()*1.5); nodes.push(n); return g; };
+  const lfo = (param, rate, depth) => { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = rate; g.gain.value = depth; o.connect(g); g.connect(param); o.start(); nodes.push(o); };
+  const every = (min, max, fn) => { const tick = () => { fn(ac.currentTime + 0.05); timers.push(setTimeout(tick, (min + Math.random()*(max - min))*1000)); }; timers.push(setTimeout(tick, min*1000)); };
+  const blip = (t, f0, f1, dur, gain, type = 'sine') => { const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(g); g.connect(out); o.start(t); o.stop(t + dur + 0.02); };
+  const click = (t, freq, gain, dur = 0.015) => { const n = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(); n.buffer = nb; f.type = 'bandpass'; f.frequency.value = freq; g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); n.connect(f); f.connect(g); g.connect(out); n.start(t, Math.random()); n.stop(t + dur + 0.01); };
+  if (w === 'rain'){ noise('bandpass', 1500, 0.09); noise('lowpass', 400, 0.04); every(0.05, 0.25, t => click(t, 2500 + Math.random()*3000, 0.05)); }
+  else if (w === 'snow'){ const g = noise('lowpass', 500, 0.025); lfo(g.gain, 0.08, 0.015); }
+  if (sc === 'sea'){ const g = noise('lowpass', 700, 0.06); lfo(g.gain, 0.11, 0.055); noise('highpass', 4000, 0.01); every(3, 7, t => blip(t, 1900, 1500, 0.25, 0.012)); }
+  else if (sc === 'park' || sc === 'field' || sc === 'mountains'){ const g = noise('lowpass', 900, 0.025); lfo(g.gain, 0.07, 0.018); if (T.tod !== 'night' && w !== 'rain') every(1.5, 5, t => { for (let k = 0; k < 2 + (Math.random()*3|0); k++) blip(t + k*0.12, 2600 + Math.random()*1200, 3800 + Math.random()*1500, 0.09, 0.03); }); if (T.season === 'autumn') every(0.3, 1.2, t => click(t, 5000, 0.015, 0.05)); }
+  else if (sc === 'city'){ noise('lowpass', 260, 0.08); every(6, 14, t => blip(t, 420, 400, 0.6, 0.008, 'triangle')); }
+  else if (sc === 'office'){ noise('lowpass', 180, 0.04); every(0.6, 3, t => { for (let k = 0; k < 3 + (Math.random()*8|0); k++) click(t + k*(0.08 + Math.random()*0.08), 3000, 0.04, 0.02); }); }
+  else if (sc === 'room'){ noise('lowpass', 250, 0.015); if (T.tod === 'night' || T.tod === 'evening') every(1, 1, t => click(t, 2200, 0.02, 0.01)); if (T.season === 'winter') every(0.1, 0.6, t => click(t, 1200 + Math.random()*2000, 0.03, 0.03)); }
+  else if (sc === 'party'){ const g = noise('bandpass', 700, 0.05, 0.5); lfo(g.gain, 0.6, 0.02); every(2, 6, t => click(t, 900, 0.06, 0.25)); }
+  AMB = { stop(){ timers.forEach(clearTimeout); const t = ac.currentTime; out.gain.cancelScheduledValues(t); out.gain.setValueAtTime(out.gain.value, t); out.gain.linearRampToValueAtTime(0, t + 0.8); setTimeout(() => { nodes.forEach(n => { try { n.stop(); } catch {} }); out.disconnect(); }, 1000); } };
+  return AMB;
+}
+
+/* ---------- войти в день: кино, 360° и VR ---------- */
+let IMM = null;
+function particlesFor(day){
+  const T = day.vibe.textInfo, R = Math.random;
+  const kind = T.weather === 'rain' ? 'rain' : (T.weather === 'snow' || T.season === 'winter') ? 'snow' : T.scene === 'party' ? 'confetti' : T.season === 'autumn' ? 'leaves' : T.tod === 'night' ? 'stars' : 'dust';
+  const n = { rain: 260, snow: 160, confetti: 90, leaves: 40, stars: 70, dust: 60 }[kind];
+  return { kind, list: Array.from({length: n}, () => ({ x: R(), y: R(), z: 0.3 + R()*0.7, a: R()*6.28, s: R() })) };
+}
+function drawParticles(x, W, H, pt, dt, t, shift, th){
+  const cols = [th.accent, th.accent2, '#ffd23f', '#ff5fa2', '#3ee6e0'];
+  for (const p of pt.list){
+    const k = pt.kind;
+    if (k === 'rain'){ p.y += dt*(1.4 + p.z); p.x -= dt*0.08; }
+    else if (k === 'snow'){ p.y += dt*0.06*(0.5 + p.z); p.x += Math.sin(t*0.8 + p.a)*dt*0.02; }
+    else if (k === 'leaves'){ p.y += dt*0.08*(0.5 + p.z); p.x += Math.sin(t*0.6 + p.a)*dt*0.05; p.a += dt*1.5; }
+    else if (k === 'confetti'){ p.y += dt*0.12*(0.5 + p.z); p.a += dt*4; }
+    else if (k === 'dust'){ p.y -= dt*0.01*p.z; p.x += Math.sin(t*0.3 + p.a)*dt*0.006; }
+    if (p.y > 1.05) { p.y = -0.05; p.x = Math.random(); } if (p.y < -0.05) p.y = 1.05;
+    const px = (((p.x + shift*p.z) % 1) + 1) % 1 * W, py = p.y * H, z = p.z;
+    x.globalAlpha = k === 'stars' ? 0.4 + 0.5*Math.abs(Math.sin(t*1.5 + p.a)) : k === 'dust' ? 0.25 + 0.3*Math.abs(Math.sin(t + p.a)) : 0.85;
+    if (k === 'rain'){ x.strokeStyle = 'rgba(220,230,240,.55)'; x.lineWidth = z*1.6; x.beginPath(); x.moveTo(px, py); x.lineTo(px - 4*z, py + 26*z); x.stroke(); }
+    else if (k === 'snow'){ x.fillStyle = '#fff'; x.beginPath(); x.arc(px, py, 1.2 + z*3, 0, 7); x.fill(); }
+    else if (k === 'leaves'){ x.save(); x.translate(px, py); x.rotate(p.a); x.fillStyle = ['#e8892b','#f4c84f','#c4501e'][(p.s*3)|0]; x.beginPath(); x.ellipse(0, 0, 9*z + 3, 4*z + 1.5, 0, 0, 7); x.fill(); x.restore(); }
+    else if (k === 'confetti'){ x.save(); x.translate(px, py); x.rotate(p.a); x.fillStyle = cols[(p.s*5)|0]; x.fillRect(-5*z, -2*z, 10*z, 4*z); x.restore(); }
+    else { x.fillStyle = k === 'stars' ? '#fffbe6' : 'rgba(255,240,200,1)'; x.beginPath(); x.arc(px, py, k === 'stars' ? 1 + z : 1 + z*2, 0, 7); x.fill(); }
+  }
+  x.globalAlpha = 1;
+}
+function makePano(img){
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height, H = Math.round(h*1.45), oy = Math.round(h*0.22);
+  const c = makeCanvas(w*2, H), x = c.getContext('2d');
+  const s = makeCanvas(8, 8).getContext('2d'); s.drawImage(img, 0, 0, w, Math.max(2, h*0.05), 0, 0, 8, 8); const top = s.getImageData(0, 0, 1, 1).data;
+  s.drawImage(img, 0, h*0.95, w, h*0.05, 0, 0, 8, 8); const bot = s.getImageData(0, 0, 1, 1).data;
+  const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, `rgb(${top[0]},${top[1]},${top[2]})`); g.addColorStop(1, `rgb(${bot[0]},${bot[1]},${bot[2]})`); x.fillStyle = g; x.fillRect(0, 0, w*2, H);
+  x.drawImage(img, 0, oy, w, h); x.save(); x.translate(w*2, 0); x.scale(-1, 1); x.drawImage(img, 0, oy, w, h); x.restore();
+  const fade = (y0, y1, col) => { const gg = x.createLinearGradient(0, y0, 0, y1); gg.addColorStop(0, col.replace(')', ',1)').replace('rgb', 'rgba')); gg.addColorStop(1, col.replace(')', ',0)').replace('rgb', 'rgba')); x.fillStyle = gg; x.fillRect(0, Math.min(y0, y1), w*2, Math.abs(y1 - y0)); };
+  fade(oy, oy + h*0.12, `rgb(${top[0]},${top[1]},${top[2]})`); fade(oy + h, oy + h*0.88, `rgb(${bot[0]},${bot[1]},${bot[2]})`);
+  return c;
+}
+async function aiPano(day){
+  if (!IMAGE_ENDPOINT) return null;
+  try { const cached = await ADB.get(day.id + ':pano:' + (day.seedShift || 0)); if (cached) return await loadImg(cached); } catch {}
+  try {
+    const r = await fetch(IMAGE_ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:imagePrompt(day), text:day.text, style:imageStyle(day), photo: await refPhoto(day), pano:true})});
+    const j = await r.json(); if (!r.ok || !j.image) return null;
+    const im = await loadImg(j.image), k = Math.min(1, 1920 / im.naturalWidth), c = makeCanvas(Math.round(im.naturalWidth*k), Math.round(im.naturalHeight*k)); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+    const url = c.toDataURL('image/jpeg', 0.82); try { await ADB.put(day.id + ':pano:' + (day.seedShift || 0), url); } catch {} return await loadImg(url);
+  } catch { return null; }
+}
+function enterDay(day, P, mode = 'cinema'){
+  exitDay(); stopSoundtrack(); stopAmbient(); if ("speechSynthesis" in window) speechSynthesis.cancel(); $$("audio").forEach(a => a.pause());
+  const el = document.createElement('div'); el.className = 'imm';
+  el.innerHTML = `<canvas></canvas><div class="imm-top"><button class="ibtn" data-a="x" aria-label="Выйти">${ms('close')}</button>
+    <div class="imm-btns"><button class="chip" data-a="cinema">Кино</button><button class="chip" data-a="360">360°</button><button class="chip" data-a="vr">VR</button><button class="ibtn" data-a="snd" aria-label="Звук">${ms('volume_up')}</button></div></div>
+    <div class="imm-cap"><div class="lb-sm up" style="opacity:.8">${fmtLong(day.date)}</div><div class="imm-title">${esc(day.title)}</div><div class="hand" style="color:#fff;opacity:.9">${esc(day.caption)}</div></div>
+    <div class="imm-hint" hidden></div>`;
+  document.body.appendChild(el); document.body.style.overflow = 'hidden';
+  const cv = $('canvas', el), x = cv.getContext('2d'), dpr = Math.min(2, window.devicePixelRatio || 1);
+  const size = () => { cv.width = innerWidth*dpr; cv.height = innerHeight*dpr; }; size(); addEventListener('resize', size);
+  const st = { mode, yaw: 0, pitch: 0, ty: 0, tp: 0, gyro: false, pano: makePano(P.photos[0]), pt: particlesFor(day), muted: false, t0: performance.now(), last: performance.now(), alive: true, base: null };
+  aiPano(day).then(im => { if (im && st.alive) st.pano = makePano(im); });
+  const hint = $('.imm-hint', el), cap = $('.imm-cap', el);
+  const setMode = async m => {
+    st.mode = m; $$('.imm-btns .chip', el).forEach(c => c.classList.toggle('on', c.dataset.a === m)); el.classList.toggle('vr', m === 'vr');
+    if (m !== 'cinema'){
+      try { if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') await DeviceOrientationEvent.requestPermission(); } catch {}
+      hint.hidden = false; hint.textContent = m === 'vr' ? 'Поверните телефон горизонтально и вставьте в VR-очки' : 'Поворачивайте телефон или ведите пальцем'; setTimeout(() => hint.hidden = true, 3500);
+      if (m === 'vr'){ try { await el.requestFullscreen?.(); await screen.orientation?.lock?.('landscape'); } catch {} }
+    }
+  };
+  const onOri = e => {
+    if (e.alpha == null) return; st.gyro = true;
+    const a = e.alpha*Math.PI/180, b = e.beta*Math.PI/180, g = e.gamma*Math.PI/180;
+    const fx = -Math.cos(a)*Math.sin(g) - Math.sin(a)*Math.sin(b)*Math.cos(g), fy = -Math.sin(a)*Math.sin(g) + Math.cos(a)*Math.sin(b)*Math.cos(g), fz = -Math.cos(b)*Math.cos(g);
+    const yaw = Math.atan2(fx, fy)*180/Math.PI, pitch = Math.asin(clamp(fz, -1, 1))*180/Math.PI;
+    if (st.base == null) st.base = yaw - st.ty;
+    st.ty = yaw - st.base; st.tp = clamp(pitch, -35, 35);
+  };
+  addEventListener('deviceorientation', onOri);
+  let drag = null;
+  cv.onpointerdown = e => { drag = {x: e.clientX, y: e.clientY, yaw: st.ty, pitch: st.tp}; cv.setPointerCapture(e.pointerId); };
+  cv.onpointermove = e => { if (!drag) return; st.ty = drag.yaw - (e.clientX - drag.x)*0.25; st.tp = clamp(drag.pitch + (e.clientY - drag.y)*0.15, -35, 35); if (st.mode === 'cinema') setMode('360'); };
+  cv.onpointerup = () => { drag = null; };
+  // звук: песня (фрагмент) или саундтрек + звук места, через 5 с — голос
+  let song = null;
+  (async () => { const url = await songUrl(day); if (!st.alive) return; if (url){ song = new Audio(url); song.loop = true; song.volume = 0.9; song.play().catch(() => {}); } else startSoundtrack(day); startAmbient(day); })();
+  const vt = setTimeout(() => speak(day, on => { if (song) song.volume = on ? 0.35 : 0.9; }), 5000);
+  const view = (dx, dy, dw, dh, eye) => {
+    const pano = st.pano, PW = pano.width, PH = pano.height, s = dh / (PH*0.78), vw = dw / s, vh = dh / s;
+    let sx = ((((st.yaw / 360) * PW + eye - vw/2) % PW) + PW) % PW; const sy = clamp((PH - vh)/2 - (st.pitch / 35) * (PH - vh)/2, 0, PH - vh);
+    const first = Math.min(vw, PW - sx); x.drawImage(pano, sx, sy, first, vh, dx, dy, first*s, dh);
+    if (first < vw) x.drawImage(pano, 0, sy, vw - first, vh, dx + first*s, dy, (vw - first)*s, dh);
+  };
+  const frame = now => {
+    if (!st.alive) return; const t = Math.max(0, (now - st.t0)/1000), dt = Math.max(0, Math.min(0.05, (now - st.last)/1000)); st.last = now;
+    const W = cv.width, H = cv.height;
+    st.yaw += (st.ty - st.yaw)*0.15; st.pitch += (st.tp - st.pitch)*0.15;
+    x.fillStyle = '#000'; x.fillRect(0, 0, W, H);
+    if (st.mode === 'cinema'){
+      const n = P.photos.length, dur = Math.max(6, day.vibe.frameDur*1.6), i = Math.floor(t/dur) % n, p = (t % dur)/dur, f = clamp((t % dur - (dur - 1.5))/1.5);
+      drawCover(x, P.photos[i], 0, 0, W, H, 1.06 + 0.1*p, (i % 2 ? -1 : 1)*(p - 0.5)*0.6, 0);
+      if (f > 0 && n > 1){ x.globalAlpha = f; drawCover(x, P.photos[(i + 1) % n], 0, 0, W, H, 1.06, 0, 0); x.globalAlpha = 1; }
+      drawParticles(x, W, H, st.pt, dt, t, 0, P.th);
+    } else if (st.mode === '360'){
+      view(0, 0, W, H, 0); drawParticles(x, W, H, st.pt, dt, t, -st.yaw/360, P.th);
+    } else {
+      const hw = W/2; x.save(); x.beginPath(); x.rect(0, 0, hw - 2, H); x.clip(); view(0, 0, hw, H, -6); drawParticles(x, hw, H, st.pt, dt, t, -st.yaw/360, P.th); x.restore();
+      x.save(); x.beginPath(); x.rect(hw + 2, 0, hw, H); x.clip(); view(hw, 0, hw, H, 6); x.translate(hw, 0); drawParticles(x, hw, H, st.pt, 0, t, -st.yaw/360, P.th); x.restore();
+    }
+    const g = x.createLinearGradient(0, H*0.6, 0, H); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.55)'); if (st.mode !== 'vr'){ x.fillStyle = g; x.fillRect(0, H*0.6, W, H*0.4); }
+    cap.style.opacity = st.mode === 'vr' ? 0 : clamp(1 - Math.max(0, t - 7)/2, 0, 1);
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+  el.onclick = async e => { const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a;
+    if (a === 'x') exitDay();
+    else if (a === 'snd'){ st.muted = !st.muted; if (BUS) BUS.gain.value = st.muted ? 0 : 1; if (song) song.muted = st.muted; if (st.muted) speechSynthesis.cancel(); b.innerHTML = ms(st.muted ? 'volume_off' : 'volume_up'); }
+    else setMode(a); };
+  setMode(mode);
+  IMM = { stop(){ st.alive = false; clearTimeout(vt); removeEventListener('deviceorientation', onOri); removeEventListener('resize', size); if (song){ song.pause(); } stopSoundtrack(); stopAmbient(); if ('speechSynthesis' in window) speechSynthesis.cancel(); duck(false); if (BUS) BUS.gain.value = 1; try { if (document.fullscreenElement) document.exitFullscreen(); } catch {} document.body.style.overflow = ''; el.remove(); } };
+}
+function exitDay(){ if (IMM){ IMM.stop(); IMM = null; } }
+addEventListener('keydown', e => { if (e.key === 'Escape') exitDay(); });
+
 /* ---------- отрисовка ---------- */
 function drawCover(x, img, ax, ay, aw, ah, scale, px, py){
   const iw = img.width, ih = img.height, s = Math.max(aw/iw, ah/ih) * scale, w = iw*s, h = ih*s;
@@ -1095,7 +1254,7 @@ async function thumb(day){
 }
 let stops = [];
 function loop(fn){ let id, st = performance.now(), alive = true; const tick = n => { if (!alive) return; fn(Math.max(0, (n - st)/1000)); id = requestAnimationFrame(tick); }; id = requestAnimationFrame(tick); stops.push(() => { alive = false; cancelAnimationFrame(id); }); }
-function stopAll(){ stops.forEach(f => f()); stops = []; if (window.speechSynthesis) speechSynthesis.cancel(); stopSoundtrack(); duck(false); }
+function stopAll(){ stops.forEach(f => f()); stops = []; if (window.speechSynthesis) speechSynthesis.cancel(); stopSoundtrack(); stopAmbient(); exitDay(); duck(false); }
 
 /* ---------- голос ---------- */
 
@@ -1333,6 +1492,7 @@ async function viewDay(id){
   app.innerHTML = `<div class="stack fade-in">
     <section><p class="lb-sm up mut">${fmtLong(day.date).toUpperCase()} • ПАПКА № ${num}</p><h1 class="h-dl" style="margin-top:8px">${esc(day.title)}</h1><p class="hand" style="margin-top:8px">${esc(day.caption)}</p></section>
     <div class="poster"><canvas id="pc" width="1080" height="1350" aria-label="Воспоминание дня: ${esc(day.title)}"></canvas></div>
+    <div class="enter"><button class="btn" id="bEnter">${ms('play_circle', 1)}Войти в день</button><button class="btn sec" id="b360">${ms('360')}360° / VR</button></div>
     <div class="player"><div class="row"><div class="row" style="gap:12px;justify-content:flex-start;min-width:0"><button class="ibtn solid" id="bMusic" aria-label="Включить звук дня"><span class="ms f">play_arrow</span></button>
         <div style="min-width:0"><div class="h-sm trunc">${sUrl || m.embed ? esc(m.label) : 'Саундтрек дня'}</div><div class="lb-md mut trunc">${sUrl ? (day.hasClip && !sessionFull.has(day.id) ? 'ваш трек • фрагмент 60 с' : 'ваш трек') : m.embed ? esc(m.service) : 'по мотивам: ' + esc(m.label)} • ${day.vibe.music.bpm} bpm${day.vibe.music.minor === true ? ' • минор' : day.vibe.music.minor === false ? ' • мажор' : ''}</div></div></div>
         <div style="display:flex"><button class="ibtn" id="bSynth" aria-label="Сгенерированный звук дня" title="Звук дня">${ms('graphic_eq')}</button><button class="ibtn" id="bVoice" aria-label="Озвучка описания">${ms('record_voice_over')}</button></div></div>
@@ -1355,6 +1515,8 @@ async function viewDay(id){
       <div class="bento" id="bento"></div>
       <div class="row" style="margin:16px 0 8px"><span class="lb-sm up mut">Палитра дня</span><span class="lb-sm out" style="letter-spacing:0">5 экстрактов</span></div><div class="pal" id="pal"></div>
       <details><summary>Подправить настроение вручную</summary><div style="margin-top:10px">${sc.map(([k, n]) => `<div class="sl"><span>${n}</span><input type="range" min="0" max="100" step="1" value="${Math.round(day.vibe.scales[k]*100)}" data-k="${k}" aria-label="${n}"><b id="sv-${k}">${Math.round(day.vibe.scales[k]*100)}</b></div>`).join('')}<p class="b-sm out" style="font-size:12px">Воспоминание и цвета сайта пересоберутся.</p></div></details></section>
+    <section class="card"><div class="row" style="gap:8px;justify-content:flex-start">${ms('psychology_alt')}<span class="h-sm">Как система увидела день</span></div>
+      <div class="bento" style="margin:12px 0" id="seen"></div><ul class="rules" id="rules"></ul></section>
     <section class="card"><div class="h-sm" style="margin-bottom:8px">Папка дня</div><div class="files" id="files"></div></section>
     <section class="card"><div class="h-sm" style="margin-bottom:8px">Описание дня</div><p class="quote">${esc(day.description)}</p>
       <details><summary>Исходная запись</summary><p class="b-sm" style="margin-top:8px">${esc(day.text)}</p></details></section>
@@ -1373,6 +1535,12 @@ async function viewDay(id){
       <div class="cell"><span class="lb">${ms('device_thermostat')}Температура</span><span class="h-sm" style="font-size:15px">${tempWord(s.warmth)}</span></div>
       <div class="cell"><span class="lb">${ms('palette')}Приём</span><span class="h-sm" style="font-size:15px">${TECH[v.technique].name}: ${TECH[v.technique].what}</span></div>
       <div class="cell"><span class="lb">${ms('graphic_eq')}Ритм кадров</span><span class="h-sm" style="font-size:15px">${v.cut === 'cut' ? 'Резкий монтаж' : 'Плавная смена'}</span></div>`;
+    const ti = v.textInfo, hitsAll = [...ti.hits.warm, ...ti.hits.cold, ...ti.hits.tension].slice(0, 5);
+    const SCN = {park:'парк', sea:'море', mountains:'горы', office:'офис', room:'комната', party:'праздник', city:'город', field:'простор'}, TOD = {night:'ночь', evening:'вечер', morning:'утро'}, SEA = {autumn:'осень', winter:'зима', spring:'весна', summer:'лето'}, WEA = {rain:'дождь', snow:'снег', fog:'туман'};
+    $('#seen').innerHTML = `<div class="cell w"><span class="lb">${ms('edit_note')}Из текста</span><span class="b-md" style="color:var(--on)">сцена: ${SCN[ti.scene] || 'простор'}${ti.tod ? ', ' + TOD[ti.tod] : ''}${ti.season ? ', ' + SEA[ti.season] : ''}${ti.weather ? ', ' + WEA[ti.weather] : ''}${hitsAll.length ? '<br>слова-сигналы: ' + hitsAll.map(w => '«' + esc(w) + '»').join(', ') : ''}</span></div>
+      <div class="cell"><span class="lb">${ms('photo_camera')}Из фото</span><span class="b-md" style="color:var(--on)">${v.photo.name}, ${v.photo.lum > 0.56 ? 'светлые' : 'тёмные'} кадры</span></div>
+      <div class="cell"><span class="lb">${ms('music_note')}Из песни</span><span class="b-md" style="color:var(--on)">${v.music.bpm} bpm${v.music.minor === true ? ', минор' : v.music.minor === false ? ', мажор' : ''}${v.music.genre ? ', ' + v.music.genre : ''}</span></div>`;
+    $('#rules').innerHTML = v.rules.map(r => `<li>${ms('arrow_forward')}${esc(r)}</li>`).join('');
     $('#pal').innerHTML = [P.th.bg, P.th.accent, P.th.accent2, ...v.photo.colors.slice(0, 2)].map(c => `<div><i style="background:${c}"></i><span>${c}</span></div>`).join('');
     $('#files').innerHTML = `<div><span>запись.txt</span><span>${day.text.split(/\s+/).length} слов</span></div><div><span>фото</span><span>${day.demo ? 3 : day.photos.length} шт.</span></div><div><span>песня</span><span>${esc(m.service)}</span></div><div><span>картина</span><span>${day.art ? 'ИИ-генерация' : 'нарисована системой'}, ${TECH[v.technique].name}</span></div><div><span>описание</span><span>${day.description.split(/\s+/).length} слов</span></div><div><span>озвучка</span><span>${esc(v.voice.label)}</span></div>`;
   };
@@ -1380,12 +1548,14 @@ async function viewDay(id){
   const c = $('#pc'), x = c.getContext('2d');
   loop(t => { drawPoster(x, day, P, t); const n = P.photos.length, dur = day.vibe.frameDur; $('#prog').style.width = ((t % (dur*n)) / (dur*n) * 100).toFixed(1) + '%'; $('#pcur').textContent = `кадр ${Math.floor(t / dur) % n + 1} из ${n}`; });
   const player = $('#player'), audioUrl = sUrl;
-  $('#bSynth').onclick = () => { $('audio', player)?.pause(); if (SOUND && SOUND.day === day.id){ stopSoundtrack(); $('#bSynth').innerHTML = ms('graphic_eq'); } else { startSoundtrack(day); $('#bSynth').innerHTML = ms('stop_circle'); } };
+  $('#bSynth').onclick = () => { $('audio', player)?.pause(); if (SOUND && SOUND.day === day.id){ stopSoundtrack(); stopAmbient(); $('#bSynth').innerHTML = ms('graphic_eq'); } else { startSoundtrack(day); startAmbient(day); $('#bSynth').innerHTML = ms('stop_circle'); } };
   $('#bMusic').onclick = () => {
     if (audioUrl){ stopSoundtrack(); let a = $('audio', player); if (!a){ player.innerHTML = `<audio src="${audioUrl}" controls loop style="width:100%"></audio>`; a = $('audio', player); a.onpause = () => $('#bMusic').innerHTML = ms('play_arrow', 1); a.onplay = () => $('#bMusic').innerHTML = ms('pause', 1); } a.paused ? a.play().catch(() => toast('Нажмите ▶ в плеере ниже')) : a.pause(); }
     else if (m.embed){ if (!$('iframe', player)) player.innerHTML = `<iframe src="${m.embed}" style="width:100%;border:0;border-radius:12px" height="${m.embed.includes('spotify') ? 152 : 220}" allow="autoplay; encrypted-media; clipboard-write" loading="lazy" title="Песня дня"></iframe><p class="b-sm out" style="font-size:12px;margin-top:6px">Если плеер не загрузился, откройте оригинал по кнопке выше.</p>`; }
     else { if (SOUND && SOUND.day === day.id){ stopSoundtrack(); $('#bMusic').innerHTML = ms('play_arrow', 1); } else { startSoundtrack(day); $('#bMusic').innerHTML = ms('pause', 1); } }
   };
+  $('#bEnter').onclick = () => enterDay(day, P, 'cinema');
+  $('#b360').onclick = () => enterDay(day, P, '360');
   $('#bVoice').onclick = () => speak(day, on => { $('#bVoice').innerHTML = ms(on ? 'stop_circle' : 'record_voice_over'); });
   const fillVoices = () => { const vs = ruVoices(), cur = pickVoice(); const sel = $('#voiceSel'); if (!sel) return; sel.innerHTML = vs.length ? vs.map(v => `<option ${cur && v.name === cur.name ? 'selected' : ''}>${esc(v.name)}</option>`).join('') : '<option>голос браузера</option>'; };
   fillVoices(); if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = fillVoices;
