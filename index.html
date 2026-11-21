@@ -971,6 +971,26 @@ function scentsFor(day){
   return s;
 }
 
+/* ---------- фильмы, сериалы, аниме и книги под вайб дня ---------- */
+const MEDIA = {
+  'Тепло': { films:[['Амели','2001'],['Полночь в Париже','2011'],['Патерсон','2016']], series:[['Девочки Гилмор','2000'],['Тед Лассо','2020']], anime:[['Мой сосед Тоторо','1988'],['Ведьмина служба доставки','1989']], books:[['Вино из одуванчиков','Рэй Брэдбери'],['Таинственный сад','Фрэнсис Бёрнетт']] },
+  'Ностальгия': { films:[['Королевство полной луны','2012'],['Леди Бёрд','2017'],['Отель «Гранд Будапешт»','2014']], series:[['Чудесные годы','1988'],['Очень странные дела','2016']], anime:[['Твоё имя','2016'],['Унесённые призраками','2001']], books:[['Маленький принц','Антуан де Сент-Экзюпери'],['Вино из одуванчиков','Рэй Брэдбери']] },
+  'Грусть': { films:[['Вечное сияние чистого разума','2004'],['Трудности перевода','2003']], series:[['Нормальные люди','2020'],['Конь БоДжек','2014']], anime:[['Твоя апрельская ложь','2014'],['Вайолет Эвергарден','2018']], books:[['Три товарища','Эрих Мария Ремарк'],['Норвежский лес','Харуки Мураками']] },
+  'Тишина': { films:[['Идеальные дни','2023'],['Патерсон','2016']], series:[['Полуночная закусочная: Токийские истории','2016']], anime:[['Мушиши','2005'],['Лагерь на свежем воздухе','2018']], books:[['Снежная страна','Ясунари Кавабата'],['Сиддхартха','Герман Гессе']] },
+  'Напряжение': { films:[['Социальная сеть','2010'],['Одержимость','2014'],['Драйв','2011']], series:[['Мистер Робот','2015'],['Медведь','2022']], anime:[['Призрак в доспехах','1995'],['Акира','1988']], books:[['Нейромант','Уильям Гибсон'],['Марсианин','Энди Вейер']] },
+  'Радость': { films:[['Ла-Ла Ленд','2016'],['Мамма MIA!','2008'],['Школа рока','2003']], series:[['Друзья','1994'],['Бруклин 9-9','2013']], anime:[['Семья шпиона','2022'],['Госпожа Кагуя: В любви как на войне','2019']], books:[['Трое в лодке, не считая собаки','Джером К. Джером'],['Автостопом по галактике','Дуглас Адамс']] },
+  'Вдохновение': { films:[['Невероятная жизнь Уолтера Митти','2013'],['Общество мёртвых поэтов','1989']], series:[['Ход королевы','2020'],['Абстракция: Искусство дизайна','2017']], anime:[['Голубой период','2021'],['Волейбол!!','2014']], books:[['Чайка по имени Джонатан Ливингстон','Ричард Бах'],['Алхимик','Пауло Коэльо']] },
+};
+const MEDIA_EXTRA = { rain:['anime',['Сад изящных слов','2013']], snow:['films',['Отпуск по обмену','2006']], winter:['films',['Отпуск по обмену','2006']], autumn:['films',['Осень в Нью-Йорке','2000']], summer:['films',['Назови меня своим именем','2017']], spring:['anime',['Твоя апрельская ложь','2014']] };
+function mediaFor(day){
+  const v = day.vibe, T = v.textInfo, mood = moodOf(v).short, R = mulberry32(hashStr(day.id) + 7 + (day.seedShift || 0));
+  const base = MEDIA[mood] || MEDIA['Вдохновение'], out = {};
+  for (const k of ['films','series','anime','books']) out[k] = [...base[k]].sort(() => R() - 0.5).slice(0, 2);
+  const ex = MEDIA_EXTRA[T.weather] || MEDIA_EXTRA[T.season];
+  if (ex && !out[ex[0]].some(x => x[0] === ex[1][0])) out[ex[0]] = [ex[1], ...out[ex[0]]].slice(0, 2);
+  return out;
+}
+
 /* ---------- отрисовка ---------- */
 function drawCover(x, img, ax, ay, aw, ah, scale, px, py){
   const iw = img.width, ih = img.height, s = Math.max(aw/iw, ah/ih) * scale, w = iw*s, h = ih*s;
@@ -1284,7 +1304,7 @@ async function viewDay(id){
   topBack('#/diary', 'Назад', `<button class="ibtn" id="tPng" aria-label="Скачать PNG">${ms('ios_share')}</button>`);
   let P = await prepare(day); applyTheme(day);
   const list = sorted(), i = list.findIndex(d => d.id === id), prev = list[i-1], next = list[i+1];
-  const m = day.music, num = dayNum(day), sUrl = await songUrl(day), pl = playlistFor(day), smell = scentsFor(day);
+  const m = day.music, num = dayNum(day), sUrl = await songUrl(day), pl = playlistFor(day), smell = scentsFor(day), media = mediaFor(day);
   const sc = [['warmth','Тепло'],['energy','Энергия'],['tension','Напряжение'],['tempo','Темп']];
   app.innerHTML = `<div class="stack fade-in">
     <section><p class="lb-sm up mut">${fmtLong(day.date).toUpperCase()} • ПАПКА № ${num}</p><h1 class="h-dl" style="margin-top:8px">${esc(day.title)}</h1><p class="hand" style="margin-top:8px">${esc(day.caption)}</p></section>
@@ -1297,6 +1317,9 @@ async function viewDay(id){
       <div id="player" style="margin-top:12px"></div></div>
     <section class="card"><div class="row" style="margin-bottom:4px"><div class="row" style="gap:8px">${ms('queue_music')}<span class="h-sm">Подборка, чтобы вернуться в этот день</span></div></div><p class="b-sm out" style="margin-bottom:8px">Песни с похожей атмосферой: ${esc(moodOf(day.vibe).label.toLowerCase())}</p>
       <div class="files">${pl.map(([a, t, why]) => `<div style="align-items:center"><span style="min-width:0"><span class="lb-md pri" style="display:block">${esc(t)}</span><span class="lb-md out">${esc(a)} • ${esc(why)}</span></span><span style="display:flex;gap:4px;flex:none"><a class="pill" href="https://open.spotify.com/search/${q(a + ' ' + t)}" target="_blank" rel="noopener">Spotify</a><a class="pill" href="https://www.youtube.com/results?search_query=${q(a + ' ' + t)}" target="_blank" rel="noopener">YouTube</a><a class="pill" href="https://music.yandex.ru/search?text=${q(a + ' ' + t)}" target="_blank" rel="noopener">Яндекс</a></span></div>`).join('')}</div></section>
+    <section class="card"><div class="row" style="gap:8px;justify-content:flex-start;margin-bottom:4px">${ms('movie')}<span class="h-sm">Посмотреть и почитать</span></div><p class="b-sm out" style="margin-bottom:10px">Фильмы, сериалы, аниме и книги с тем же вайбом</p>
+      ${[['films','Фильмы','theaters'],['series','Сериалы','live_tv'],['anime','Аниме','animation'],['books','Книги','menu_book']].map(([k, n, ic]) => `<div class="lb-sm up mut" style="display:flex;align-items:center;gap:6px;margin:12px 0 6px"><span class="ms" style="font-size:16px">${ic}</span>${n}</div>
+        <div class="files">${media[k].map(([t, meta]) => `<div style="align-items:center"><span style="min-width:0"><span class="lb-md pri" style="display:block">${esc(t)}</span><span class="lb-md out">${k === 'books' ? esc(meta) : meta + ' г.'}</span></span><a class="pill" style="flex:none" href="${k === 'books' ? 'https://www.google.com/search?q=' + q('книга ' + t + ' ' + meta) : 'https://www.kinopoisk.ru/index.php?kp_query=' + q(t)}" target="_blank" rel="noopener">${k === 'books' ? 'Найти' : 'Кинопоиск'} ${ms('open_in_new')}</a></div>`).join('')}</div>`).join('')}</section>
     <section class="card"><div class="row" style="gap:8px;justify-content:flex-start;margin-bottom:4px">${ms('local_florist')}<span class="h-sm">Запахи дня</span></div><p class="b-sm out" style="margin-bottom:10px">Чтобы прочувствовать день целиком, а не только увидеть</p>
       <div class="chips" style="margin-bottom:14px">${smell.notes.map(n => `<span class="chip" style="height:30px">${esc(n)}</span>`).join('')}</div>
       <div class="bento">
