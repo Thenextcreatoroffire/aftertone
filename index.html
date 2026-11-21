@@ -146,6 +146,15 @@ select.field{appearance:auto;cursor:pointer}
 .tile{position:relative;aspect-ratio:1/1.12;border-radius:16px;overflow:hidden;background:var(--cont);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;font:600 13px var(--body);color:var(--on);cursor:pointer}
 .tile.ghost{background:var(--lowest);color:var(--outline);font-weight:400}
 .tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.tile.zoom{padding:0;border:0;cursor:zoom-in}
+.mood-pick{margin-top:12px;background:var(--low);border-radius:16px;padding:14px}
+.tile .zi{position:absolute;right:8px;bottom:8px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center}
+.lbox{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;touch-action:pan-y pinch-zoom}
+.lbox img{max-width:96vw;max-height:86vh;object-fit:contain;border-radius:6px;user-select:none}
+.lbox .lb-top{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:10px 12px;color:#fff}
+.lbox .ibtn{color:#fff;background:rgba(255,255,255,.12)}
+.lbox .lb-prev,.lbox .lb-next{position:absolute;top:50%;transform:translateY(-50%)}
+.lbox .lb-prev{left:12px}.lbox .lb-next{right:12px}
 .tile .main{position:absolute;left:8px;bottom:8px;background:color-mix(in oklab,#000 55%,transparent);color:#fff;font:600 10px var(--body);padding:3px 7px;border-radius:6px}
 .tile .x{position:absolute;right:8px;top:8px;width:26px;height:26px;border-radius:999px;background:color-mix(in oklab,#000 60%,transparent);color:#fff;display:flex;align-items:center;justify-content:center}
 .tile .x .ms{font-size:16px}
@@ -324,7 +333,7 @@ const MONTHS_NOM = ['Январь','Февраль','Март','Апрель','�
 const fmtDate = d => { const [y,m,dd] = d.split('-'); return `${dd}.${m}.${y}`; };
 const fmtLong = d => { const [y,m,dd] = d.split('-').map(Number); return `${dd} ${MONTHS[m-1]} ${y}`; };
 const todayISO = () => { const n = new Date(); return new Date(n.getTime() - n.getTimezoneOffset()*60000).toISOString().slice(0,10); };
-function toast(msg, ms = 3800){ const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), ms); }
+function toast(msg, ms = 3800){ document.querySelectorAll('.toast').forEach(x => x.remove()); const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg; t.onclick = () => t.remove(); document.body.appendChild(t); setTimeout(() => t.remove(), ms); }
 
 /* ---------- цвет: sRGB ↔ OKLCH ---------- */
 const toLin = c => { c /= 255; return c <= 0.04045 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); };
@@ -548,6 +557,7 @@ const GENRES = [
   [['pop','поп','dua lipa','levitating','dance'], {genre:'поп', bpm:118, energy:0.75, minor:false}],
 ];
 const TEMPO_CHIP = { slow:{bpm:70, energy:0.28}, mid:{bpm:100, energy:0.55}, fast:{bpm:128, energy:0.82} };
+const isSearchUrl = u => /\/search|results\?search_query|search\?text=/.test(u || '');
 function musicFromLink(url, label, tempo, mode){
   const s = (label + ' ' + url).toLowerCase();
   let meta = {genre:null, bpm:100, energy:0.5, minor:null};
@@ -558,8 +568,10 @@ function musicFromLink(url, label, tempo, mode){
   const sp = url.match(/open\.spotify\.com\/(?:intl-[a-z]+\/)?(track|album|playlist)\/([A-Za-z0-9]+)/);
   const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|music\.youtube\.com\/watch\?v=)([\w-]{11})/);
   if (/spotify/.test(url)) service = 'Spotify'; else if (/youtu/.test(url)) service = 'YouTube'; else if (/yandex/.test(url)) service = 'Яндекс Музыка'; else if (/apple/.test(url)) service = 'Apple Music'; else if (/soundcloud/.test(url)) service = 'SoundCloud';
+  const ya = url.match(/music\.yandex\.[a-z]+\/album\/(\d+)\/track\/(\d+)/);
   if (sp) embed = `https://open.spotify.com/embed/${sp[1]}/${sp[2]}`;
   if (yt) embed = `https://www.youtube.com/embed/${yt[1]}`;
+  if (ya) embed = `https://music.yandex.ru/iframe/album/${ya[1]}/track/${ya[2]}`;
   return { source:'link', url, label: label || service, service, embed, tempoChip: tempo || null, ...meta };
 }
 async function analyzeAudioFile(file){
@@ -785,15 +797,15 @@ const latest = () => sorted().at(-1);
 
 const DEMO = [
   { id:'demo-autumn', date:'2026-11-08', scene:'autumn', text:'Гуляли по парку с девушкой, всё в жёлтых листьях. Было холодно, но мы пили какао из термоса и долго разговаривали обо всём. Солнце садилось очень медленно.',
-    music:{ url:'https://open.spotify.com/search/Frank%20Sinatra%20Fly%20Me%20to%20the%20Moon', label:'Frank Sinatra — Fly Me to the Moon', tempo:'slow', mode:'major' } },
+    music:{ url:'https://www.youtube.com/watch?v=pG9e0TTBi0c', label:'Frank Sinatra — Fly Me to the Moon', tempo:'slow', mode:'major' } },
   { id:'demo-office', date:'2026-11-12', scene:'office', text:'Ночь в офисе перед сдачей проекта. Срочный дедлайн, третий кофе, в наушниках электроника на повторе. Всё раздражало, но к трём ночи собрали билд.',
-    music:{ url:'https://open.spotify.com/search/Daft%20Punk%20Around%20the%20World', label:'Daft Punk — Around the World', tempo:'fast', mode:'' } },
+    music:{ url:'https://www.youtube.com/watch?v=K0HSD_i2DvA', label:'Daft Punk — Around the World', tempo:'fast', mode:'' } },
   { id:'demo-rain', date:'2026-11-16', scene:'rain', text:'Весь день шёл дождь. Сидела одна дома у окна, было немного грустно и тихо. Пила чай и слушала пианино, ничего не хотелось делать.',
-    music:{ url:'https://open.spotify.com/search/Ludovico%20Einaudi%20Nuvole%20Bianche', label:'Ludovico Einaudi — Nuvole Bianche', tempo:'slow', mode:'minor' } },
+    music:{ url:'https://www.youtube.com/watch?v=VUCI-1vIbUo', label:'Ludovico Einaudi — Nuvole Bianche', tempo:'slow', mode:'minor' } },
   { id:'demo-party', date:'2026-11-18', scene:'party', text:'День рождения у друзей! Танцевали до утра, смеялись, кричали песни, конфетти было везде. Очень весело и шумно, просто счастье.',
-    music:{ url:'https://open.spotify.com/search/Dua%20Lipa%20Levitating', label:'Dua Lipa — Levitating', tempo:'fast', mode:'major' } },
+    music:{ url:'https://www.youtube.com/watch?v=WHuBW3qKm9g', label:'Dua Lipa — Levitating', tempo:'fast', mode:'major' } },
   { id:'demo-snow', date:'2026-11-20', scene:'snow', text:'Утром выпал первый снег. Вышла на балкон с горячим чаем, город был тихий и белый, как в детстве. Спокойное утро перед учёбой.',
-    music:{ url:'https://open.spotify.com/search/Nujabes%20Aruarian%20Dance', label:'Nujabes — Aruarian Dance', tempo:'mid', mode:'' } },
+    music:{ url:'https://www.youtube.com/watch?v=XnFOucmKlXA', label:'Nujabes — Aruarian Dance', tempo:'mid', mode:'' } },
 ];
 async function seedDemo(){
   DAYS = [];
@@ -892,18 +904,45 @@ async function refPhoto(day){
   try { const src = (await photoSources(day))[0]; if (!src) return null; const w0 = src.naturalWidth || src.width, h0 = src.naturalHeight || src.height, k = Math.min(1, 500 / Math.max(w0, h0));
     const c = makeCanvas(Math.round(w0*k), Math.round(h0*k)); c.getContext('2d').drawImage(src, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.85); } catch { return null; }
 }
-async function generateAIImage(day){
+function aiWhy(e){
+  const m = String(e || '');
+  if (/4006|neurons|daily free allocation|quota|limit/i.test(m)) return 'закончился дневной бесплатный лимит нейросети';
+  if (/abort|timeout|timed out/i.test(m)) return 'нейросеть не ответила вовремя';
+  if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'нет связи с нейросетью';
+  return 'нейросеть сейчас недоступна';
+}
+async function shrinkToJpeg(src){
+  const im = await loadImg(src), k = Math.min(1, 1200 / Math.max(im.naturalWidth, im.naturalHeight)), c = makeCanvas(Math.round(im.naturalWidth*k), Math.round(im.naturalHeight*k));
+  c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.82);
+}
+/* Запасной путь: Pollinations (FLUX) прямо из браузера. Свой лимит у каждого посетителя, без ключей. */
+async function pollinationsDirect(day){
+  const v = day.vibe, T = v.textInfo || {};
+  const prompt = [SCENE_EN[T.scene] || SCENE_EN.field, T.season ? T.season + ' season' : '', T.tod || '', T.weather || '', imageStyle(day)].filter(Boolean).join(', ');
+  const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt.slice(0, 900)) + `?width=1024&height=768&model=flux&nologo=true&private=true&enhance=false&seed=${hashStr(day.id) + (day.seedShift || 0)}`;
+  const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 75000);
+  try {
+    const r = await fetch(url, { signal: ctl.signal }); const type = r.headers.get('content-type') || '';
+    if (!r.ok || !type.startsWith('image/')) throw new Error('HTTP ' + r.status);
+    const blob = await r.blob(), data = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(blob); });
+    return await shrinkToJpeg(data);
+  } finally { clearTimeout(tm); }
+}
+async function generateAIImage(day, quiet){
   if (!IMAGE_ENDPOINT) return null;
+  let why = '';
   const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 90000);
   try {
     const r = await fetch(IMAGE_ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:imagePrompt(day), text:day.text, style:imageStyle(day), photo: await refPhoto(day)}), signal:ctl.signal});
     const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.image){ const why = String(j.error || ('HTTP ' + r.status)).slice(0, 160); console.warn('Генерация картинки не удалась:', why); toast('ИИ-картинка не получилась (' + why + '). Картину нарисовала система.', 7000); return null; }
-    day.artModel = j.model || 'ИИ'; if (j.warnings && j.warnings.length) console.info('Воркер:', j.warnings);
-    const im = await loadImg(j.image), k = Math.min(1, 1200 / Math.max(im.naturalWidth, im.naturalHeight)), c = makeCanvas(Math.round(im.naturalWidth*k), Math.round(im.naturalHeight*k));
-    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.82);
-  } catch (e) { console.warn(e); toast('ИИ-картинка не ответила вовремя, картину нарисовала система'); return null; }
+    if (r.ok && j.image){ day.artModel = j.model || 'ИИ'; if (j.warnings && j.warnings.length) console.info('Воркер:', j.warnings); return await shrinkToJpeg(j.image); }
+    why = String(j.error || ('HTTP ' + r.status)); console.warn('Воркер не нарисовал картинку:', why);
+  } catch (e) { why = String(e && (e.name === 'AbortError' ? 'timeout' : e.message || e)); console.warn(e); }
   finally { clearTimeout(tm); }
+  try { const img = await pollinationsDirect(day); day.artModel = 'pollinations-flux'; return img; }
+  catch (e) { console.warn('Pollinations из браузера:', e); }
+  if (!quiet) toast(`ИИ-картинка не получилась: ${aiWhy(why)}. Картину нарисовала система — попробуйте позже «Пересоздать дизайн».`, 6000);
+  return null;
 }
 function artPalette(v, th){
   const h = th.hue, s = v.scales, T = v.textInfo;
@@ -1074,7 +1113,28 @@ function pickVoice(){
 }
 /* Облачный голос: живой голос Google (как в Переводчике). Сначала напрямую, потом через наш воркер (/tts),
    если не вышло — голосом браузера. */
-let TTS = null, TTS_VIA = 'direct';
+let TTS = null, TTS_VIA = 'direct', TTS_CLOUD_FAILED = false;
+/* iPhone: в режиме «Без звука» Safari глушит Web Audio. Переводим страницу в режим воспроизведения медиа
+   (audioSession = playback) и держим тихий зацикленный <audio>, тогда саундтрек и звуки места слышны. */
+const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+let SILENT = null;
+function unlockAudio(){
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch {}
+  try { audioCtx().resume(); } catch {}
+  if (IOS && !SILENT){
+    const n = 4410, b = new ArrayBuffer(44 + n*2), v = new DataView(b), w = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+    w(0, 'RIFF'); v.setUint32(4, 36 + n*2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 44100, true); v.setUint32(28, 88200, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n*2, true);
+    SILENT = new Audio(URL.createObjectURL(new Blob([b], { type: 'audio/wav' }))); SILENT.loop = true; SILENT.setAttribute('playsinline', ''); SILENT.volume = 0.01;
+  }
+  if (SILENT && SILENT.paused) SILENT.play().catch(() => {});
+}
+['pointerdown', 'touchend', 'keydown'].forEach(ev => addEventListener(ev, unlockAudio, { capture: true, passive: true }));
+document.addEventListener('visibilitychange', () => { if (document.hidden) SILENT?.pause(); });
+/* Если обновлённый воркер умеет /tts, озвучка идёт через него: так надёжнее, особенно на iPhone. */
+async function probeTTS(){
+  if (!IMAGE_ENDPOINT) return;
+  try { const r = await fetch(IMAGE_ENDPOINT.replace(/\/?$/, '/') + 'tts?text=' + encodeURIComponent('да')); if (r.ok && /audio/.test(r.headers.get('content-type') || '')) TTS_VIA = 'worker'; } catch {}
+}
 function ttsChunks(text){
   const out = []; let cur = '';
   for (const s of String(text).replace(/\s+/g, ' ').trim().split(/(?<=[.!?…;:])\s+/)){
@@ -1087,6 +1147,7 @@ function ttsChunks(text){
 function savedVoice(){ try { return localStorage.getItem('aftertone.voice'); } catch { return null; } }
 function voiceMode(){
   const saved = savedVoice(), tv = topVoices();
+  if (TTS_CLOUD_FAILED && tv.length) return 'local';
   if (saved === '__cloud') return 'cloud';
   if (saved && tv.some(v => v.name === saved)) return 'local';
   return tv[0] && voiceScore(tv[0]) >= 95 ? 'local' : 'cloud';
@@ -1101,17 +1162,25 @@ function speakLocal(text, onState, rate = 1, pitch = 1){
   duck(true); speechSynthesis.speak(u); onState(true);
 }
 function speakCloud(text, onState, rate = 1){
-  const parts = ttsChunks(text), a = new Audio(); let i = 0, alive = true; a.muted = !!SET.muted;
+  const parts = ttsChunks(text), a = new Audio(); let i = 0, alive = true, stall = null; a.muted = !!SET.muted; a.setAttribute('playsinline', '');
   const src = t => TTS_VIA === 'worker' ? IMAGE_ENDPOINT.replace(/\/?$/, '/') + 'tts?text=' + encodeURIComponent(t) : 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=ru&q=' + encodeURIComponent(t);
-  const end = () => { if (!alive) return; alive = false; if (TTS === me) TTS = null; duck(false); onState(false); };
-  const play = () => { if (!alive) return; if (i >= parts.length) return end(); a.src = src(parts[i]); a.preservesPitch = true; a.playbackRate = rate; a.play().catch(e => { if (e.name === 'NotAllowedError'){ toast('Браузер не дал включить звук — нажмите ещё раз'); end(); } }); };
-  a.onended = () => { i++; play(); };
-  a.onerror = () => {
-    if (!alive) return;
-    if (TTS_VIA === 'direct' && IMAGE_ENDPOINT){ TTS_VIA = 'worker'; play(); return; }
-    alive = false; if (TTS === me) TTS = null; TTS_VIA = 'direct'; toast('Облачный голос сейчас недоступен — читаю голосом браузера'); speakLocal(text, onState, rate);
+  const end = () => { if (!alive) return; alive = false; clearTimeout(stall); if (TTS === me) TTS = null; duck(false); onState(false); };
+  const fail = () => {
+    if (!alive) return; clearTimeout(stall);
+    if (TTS_VIA === 'direct' && IMAGE_ENDPOINT && i === 0){ TTS_VIA = 'worker'; play(); return; }
+    end(); TTS_VIA = 'direct'; TTS_CLOUD_FAILED = true;
+    toast(topVoices().length ? 'Облачный голос сейчас недоступен. Нажмите «Озвучка» ещё раз — прочитаю голосом устройства.' : 'Облачный голос сейчас недоступен, а встроенного русского голоса на устройстве нет.', 6000);
   };
-  const me = { stop(){ alive = false; a.pause(); a.removeAttribute('src'); duck(false); onState(false); } }; TTS = me;
+  const play = () => {
+    if (!alive) return; if (i >= parts.length) return end();
+    clearTimeout(stall); stall = setTimeout(fail, 9000);
+    a.src = src(parts[i]); a.preservesPitch = true; a.playbackRate = rate;
+    a.play().catch(e => { if (e.name === 'NotAllowedError'){ toast('Браузер не дал включить звук — нажмите ещё раз'); end(); } });
+  };
+  a.onplaying = () => clearTimeout(stall);
+  a.onended = () => { i++; play(); };
+  a.onerror = fail;
+  const me = { stop(){ alive = false; clearTimeout(stall); a.pause(); a.removeAttribute('src'); duck(false); onState(false); } }; TTS = me;
   duck(true); onState(true); play();
 }
 function speakText(text, onState, rate = 1, pitch = 1){
@@ -1237,7 +1306,7 @@ function spotifyApi(){
   return SPOTIFY_API;
 }
 function mountEmbed(box, m, autoplay){
-  const plain = () => { box.innerHTML = `<iframe src="${m.embed}${autoplay && m.embed.includes('youtube') ? '?autoplay=1' : ''}" style="width:100%;border:0;border-radius:12px;margin-top:12px;display:block" height="${m.embed.includes('spotify') ? 152 : 220}" allow="autoplay; encrypted-media; clipboard-write" loading="lazy" title="Песня дня"></iframe>`; };
+  const plain = () => { box.innerHTML = `<iframe src="${m.embed}${autoplay && m.embed.includes('youtube') ? '?autoplay=1' : ''}" style="width:100%;border:0;border-radius:12px;margin-top:12px;display:block" height="${m.embed.includes('spotify') ? 152 : m.embed.includes('yandex') ? 180 : 220}" allow="autoplay; encrypted-media; clipboard-write" loading="lazy" title="Песня дня"></iframe>`; };
   const sp = m.embed.match(/open\.spotify\.com\/embed\/(track|album|playlist|episode|show)\/([A-Za-z0-9]+)/);
   if (!sp) return plain();
   box.innerHTML = '<div style="margin-top:12px;border-radius:12px;overflow:hidden"><div id="spEl"></div></div>';
@@ -1656,6 +1725,25 @@ function stopAll(){ stops.forEach(f => f()); stops = []; stopSpeech(); stopSound
 const app = $('#app');
 
 /* ---------- настроение словами ---------- */
+const MOOD_PRESET = {
+  'Тепло':       { warmth:0.72, energy:0.32, tension:0.12, sadness:0.08, nostalgia:false, icon:'wb_twilight' },
+  'Ностальгия':  { warmth:0.55, energy:0.35, tension:0.15, sadness:0.15, nostalgia:true,  icon:'history' },
+  'Радость':     { warmth:0.68, energy:0.78, tension:0.2,  sadness:0.02, nostalgia:false, icon:'celebration' },
+  'Вдохновение': { warmth:0.5,  energy:0.55, tension:0.25, sadness:0.05, nostalgia:false, icon:'auto_awesome' },
+  'Тишина':      { warmth:0.45, energy:0.28, tension:0.1,  sadness:0.12, nostalgia:false, icon:'cloud' },
+  'Грусть':      { warmth:0.38, energy:0.25, tension:0.25, sadness:0.45, nostalgia:false, icon:'rainy' },
+  'Напряжение':  { warmth:0.35, energy:0.6,  tension:0.75, sadness:0.15, nostalgia:false, icon:'bolt' },
+};
+function refreshSwatch(v){ const th = themeFromVibe(v); v.swatch = { bg: th.bg, accent: th.accent, ink: th.ink, onAccent: contrast(th.accent, '#111111') > 6 ? '#111111' : '#f4efe6' }; }
+/* Человек может поправить настроение, если система почувствовала день иначе. Шкалы сдвигаются к выбранному
+   настроению, и по тем же правилам пересчитываются техника, палитра, ритм, звук и частицы. */
+function setMood(day, short){
+  const v = day.vibe;
+  if (!v.auto) v.auto = { scales: { ...v.scales }, nostalgia: !!v.textInfo.nostalgia };
+  if (!short){ v.scales = { ...v.auto.scales }; v.textInfo.nostalgia = v.auto.nostalgia; delete day.moodManual; delete v.auto; }
+  else { const p = MOOD_PRESET[short]; Object.assign(v.scales, { warmth: p.warmth, energy: p.energy, tension: p.tension, sadness: p.sadness }); v.textInfo.nostalgia = p.nostalgia; day.moodManual = short; }
+  finalize(v); refreshSwatch(v); day.rev++; prepCache.clear(); thumbCache.clear(); save();
+}
 function moodOf(v){
   const s = v.scales, T = v.textInfo || {};
   if (s.tension > 0.6) return {label:'Напряжение & Собранность', short:'Напряжение', icon:'bolt'};
@@ -1687,6 +1775,22 @@ async function fillThumbs(root = document){
 
 /* ---------- шапка и меню ---------- */
 function setTab(r){ $$('.tabs a').forEach(a => a.classList.toggle('on', a.dataset.r === r)); }
+function openPhotos(list, start = 0, title = ''){
+  const srcs = list.map(im => im.src || (im.toDataURL ? im.toDataURL('image/jpeg', 0.92) : '')); let k = start;
+  const o = document.createElement('div'); o.className = 'lbox'; o.setAttribute('role', 'dialog'); o.setAttribute('aria-label', 'Фото дня');
+  o.innerHTML = `<img alt=""><div class="lb-top"><span class="lb-md" id="lbN"></span><button class="ibtn" id="lbX" aria-label="Закрыть">${ms('close')}</button></div>${srcs.length > 1 ? `<button class="ibtn lb-prev" aria-label="Предыдущее фото">${ms('chevron_left')}</button><button class="ibtn lb-next" aria-label="Следующее фото">${ms('chevron_right')}</button>` : ''}`;
+  document.body.appendChild(o); document.body.style.overflow = 'hidden';
+  const img = $('img', o), show = () => { img.src = srcs[k]; img.alt = `${title} — фото ${k + 1}`; $('#lbN').textContent = srcs.length > 1 ? `${k + 1} / ${srcs.length}` : ''; };
+  const step = d => { k = (k + d + srcs.length) % srcs.length; show(); };
+  const close = () => { o.remove(); document.body.style.overflow = ''; removeEventListener('keydown', key); };
+  const key = e => { if (e.key === 'Escape') close(); else if (e.key === 'ArrowRight') step(1); else if (e.key === 'ArrowLeft') step(-1); };
+  addEventListener('keydown', key);
+  $('#lbX').onclick = close; $('.lb-prev', o) && ($('.lb-prev', o).onclick = e => { e.stopPropagation(); step(-1); }); $('.lb-next', o) && ($('.lb-next', o).onclick = e => { e.stopPropagation(); step(1); });
+  o.onclick = e => { if (e.target === o) close(); };
+  let x0 = null; o.addEventListener('touchstart', e => x0 = e.touches[0].clientX, { passive: true });
+  o.addEventListener('touchend', e => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 50 && srcs.length > 1) step(dx < 0 ? 1 : -1); x0 = null; }, { passive: true });
+  show();
+}
 function topActions(extra = ''){
   return `<div class="tact">${extra}<button class="ibtn" id="tSearch" aria-label="Поиск по дневнику" title="Поиск (Ctrl+K)">${ms('search')}</button><button class="ibtn" id="tMute" aria-label="${SET.muted ? 'Включить звук' : 'Выключить звук'}" title="${SET.muted ? 'Включить звук' : 'Выключить звук'}">${ms(SET.muted ? 'volume_off' : 'volume_up')}</button><button class="ibtn" id="me" aria-label="Профиль">${USER ? `<span class="ava sm">${esc(userName().slice(0, 1).toUpperCase())}</span>` : ms('person')}</button></div>`;
 }
@@ -1839,7 +1943,7 @@ async function viewDiary(){
       ? `<div class="grid2">${items.map(d => `<a href="#/day/${d.id}"><img data-thumb="${d.id}" alt="${esc(d.title)}"><div class="lb-md pri trunc" style="margin-top:8px">${esc(d.title)}</div><div class="lb-md out">${shortDate(d.date)} · ${TECH[d.vibe.technique].name}</div></a>`).join('')}</div>`
       : `<div class="list d2">${items.map(d => { const m = moodOf(d.vibe); return `<a class="dcard" href="#/day/${d.id}"><div class="cov"><img data-photo="${d.id}" alt=""></div>
           <div class="row"><span class="pill">${ms(m.icon)}${m.short}</span><span class="lb-md out">${shortDate(d.date)}</span></div>
-          <h3 class="h-md">${esc(d.title)}</h3><p class="b-sm" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(d.text)}</p>
+          <h3 class="h-md">${esc(d.title)}</h3><p class="b-sm" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(d.description || d.text)}</p>
           <div class="mini"><div class="row" style="gap:10px;justify-content:flex-start;min-width:0"><span class="ibtn" style="width:32px;height:32px">${ms('play_arrow', 1)}</span><div style="min-width:0"><div class="lb-md pri trunc">${esc(d.music.label)}</div><div class="lb-md out" style="font-size:11px">${d.vibe.music.bpm} bpm • ${TECH[d.vibe.technique].name}</div></div></div></div></a>`; }).join('')}</div>`;
     fillThumbs($('#dl'));
   };
@@ -1962,13 +2066,15 @@ async function viewDay(id){
   const m = day.music, num = dayNum(day), sUrl = await songUrl(day), pl = playlistFor(day), smell = scentsFor(day), media = mediaFor(day);
   const sc = [['warmth','Тепло'],['energy','Энергия'],['tension','Напряжение'],['tempo','Темп']];
   app.innerHTML = `<div class="stack fade-in two dayv">
-    <section class="F"><p class="lb-sm up mut">${fmtLong(day.date).toUpperCase()} • ПАПКА № ${num}</p><h1 class="h-dl" style="margin-top:8px">${esc(day.title)}</h1><p class="hand" style="margin-top:8px">${esc(day.caption)}</p></section>
+    <section class="F"><p class="lb-sm up mut">${fmtLong(day.date).toUpperCase()} • ПАПКА № ${num}</p><h1 class="h-dl" style="margin-top:8px">${esc(day.title)}</h1><p class="hand" style="margin-top:8px">${esc(day.caption)}</p>
+      <div class="row" style="justify-content:flex-start;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="chip" id="moodBtn" aria-expanded="false" title="Поменять настроение дня">${ms(moodOf(day.vibe).icon)}${esc(moodOf(day.vibe).short)}${day.moodManual ? ' · выбрано вами' : ''}${ms('edit')}</button></div>
+      <div id="moodPick" class="mood-pick" hidden><p class="b-sm" style="margin-bottom:8px">Как ощущался этот день? Оформление перестроится по правилам системы.</p><div class="row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">${Object.entries(MOOD_PRESET).map(([k, p]) => `<button class="chip ${moodOf(day.vibe).short === k ? 'on' : ''}" data-mood="${k}">${ms(p.icon)}${k}</button>`).join('')}${day.moodManual ? `<button class="chip" data-mood="">${ms('undo')}Как определила система</button>` : ''}</div></div></section>
     <div class="col sticky">
     <div class="poster"><canvas id="pc" width="1080" height="1350" aria-label="Воспоминание дня: ${esc(day.title)}"></canvas></div>
     <div class="player"><div class="lb-sm up out">Музыка дня</div>
       <div class="row" style="margin-top:10px"><div class="row" style="gap:12px;justify-content:flex-start;min-width:0">${sUrl || !m.embed ? `<button class="ibtn solid" id="bMusic" aria-label="Включить музыку"><span class="ms f">play_arrow</span></button>` : `<span class="ibtn solid" aria-hidden="true">${ms('music_note', 1)}</span>`}
         <div style="min-width:0"><div class="h-sm trunc">${sUrl || m.embed ? esc(m.label) : 'Саундтрек дня'}</div><div class="lb-md mut trunc">${sUrl ? (day.hasClip && !sessionFull.has(day.id) ? 'ваш трек • фрагмент 60 с' : 'ваш трек') : m.embed ? esc(m.service) : (m.label ? 'по мотивам: ' + esc(m.label) : 'сгенерирован под настроение')} • ${day.vibe.music.bpm} bpm${day.vibe.music.minor === true ? ' • минор' : day.vibe.music.minor === false ? ' • мажор' : ''}</div></div></div>
-        ${m.url ? `<a class="ibtn" href="${esc(m.url)}" target="_blank" rel="noopener" aria-label="Открыть в ${esc(m.service)}" title="Открыть в ${esc(m.service)}">${ms('open_in_new')}</a>` : ''}</div>
+        ${m.url ? (isSearchUrl(m.url) ? `<a class="btn sec sm" href="${esc(m.url)}" target="_blank" rel="noopener" title="Ссылка ведёт на поиск песни">${ms('search')}Найти</a>` : `<a class="ibtn" href="${esc(m.url)}" target="_blank" rel="noopener" aria-label="Открыть в ${esc(m.service)}" title="Открыть в ${esc(m.service)}">${ms('open_in_new')}</a>`) : ''}</div>
       <div id="player"></div><p class="b-sm out" id="apHint" style="font-size:12px;margin-top:8px;display:none"></p></div>
     <div class="player"><div class="lb-sm up out">Голос и атмосфера</div>
       <div class="ctas" style="margin-top:10px"><button class="btn sec sm" id="bVoice">${ms('record_voice_over')}<span>Озвучка</span></button><button class="btn sec sm" id="bAmb">${ms(ambName(day)[1])}<span>${ambName(day)[0]}</span></button></div></div>
@@ -2040,14 +2146,18 @@ async function viewDay(id){
   }
   $('#bAmb').onclick = () => { const on = !AMB; if (on){ startAmbient(day); audioCtx().resume(); } else stopAmbient(); $('#bAmb').classList.toggle('on', on); $('span:first-child', $('#bAmb')).textContent = on ? 'stop_circle' : ambName(day)[1]; };
   $('#bVoice').onclick = () => speak(day, on => { $('#bVoice').innerHTML = `${ms(on ? 'stop_circle' : 'record_voice_over')}<span>${on ? 'Остановить' : 'Озвучка'}</span>`; });
-  $('#phs').innerHTML = P.raw.map((im, k) => { const cc = makeCanvas(300, 336); drawCover(cc.getContext('2d'), im, 0, 0, 300, 336, 1, 0, 0); return `<div class="tile"><img src="${cc.toDataURL('image/jpeg', 0.8)}" alt="Фото ${k + 1}"></div>`; }).join('');
+  $('#phs').innerHTML = P.raw.map((im, k) => { const cc = makeCanvas(300, 336); drawCover(cc.getContext('2d'), im, 0, 0, 300, 336, 1, 0, 0); return `<button class="tile zoom" data-k="${k}" aria-label="Открыть фото ${k + 1} на весь экран"><img src="${cc.toDataURL('image/jpeg', 0.8)}" alt="Фото ${k + 1}"><span class="ms zi">zoom_in</span></button>`; }).join('');
+  $$('#phs .zoom').forEach(b => b.onclick = () => openPhotos(P.raw, +b.dataset.k, day.title));
   const png = () => c.toBlob(b => { if (b){ saveBlob(b, day.title + '.png'); toast('Картинка сохранена — проверьте загрузки'); } else toast('Не удалось сохранить картинку'); }, 'image/png');
   $('#bPng').onclick = png;
+  $('#moodBtn').onclick = () => { const pk = $('#moodPick'), open = pk.hidden; pk.hidden = !open; $('#moodBtn').setAttribute('aria-expanded', open); };
+  $$('#moodPick [data-mood]').forEach(b => b.onclick = async () => { const y = scrollY; setMood(day, b.dataset.mood || null); await route(curPath); scrollTo(0, y); toast(b.dataset.mood ? `Настроение дня: ${b.dataset.mood}. Оформление перестроено.` : 'Вернул настроение, которое определила система'); });
   $('#bVid').onclick = e => makeVideo(day, P, c, e.currentTarget);
   prebuildVideo(day, P);
   $('#bRe').onclick = async () => {
-    if (IMAGE_ENDPOINT){ const b = busy('Нейросеть рисует день'); const img = await generateAIImage(day); b.done(); if (img){ day.art = [img]; day.rev++; save(); P = await prepare(day); side(); toast('Новая картина от нейросети'); return; } }
-    day.seedShift = (day.seedShift || 0) + 1; day.rev++; save(); P = await prepare(day); toast('Новая версия картины по тем же правилам'); };
+    day.seedShift = (day.seedShift || 0) + 1;
+    if (IMAGE_ENDPOINT && SET.ai){ const b = busy('Нейросеть рисует день'); const img = await generateAIImage(day, true); b.done(); if (img){ day.art = [img]; day.rev++; save(); P = await prepare(day); side(); toast('Новая картина от нейросети'); return; } }
+    day.rev++; save(); P = await prepare(day); toast(IMAGE_ENDPOINT && SET.ai ? 'Нейросеть сейчас недоступна — показываю новую версию по правилам системы' : 'Новая версия картины по тем же правилам', 5000); };
   $('#bDel').onclick = e => { const b = e.currentTarget; if (!b.dataset.sure){ b.dataset.sure = 1; $('span:last-child', b).textContent = 'Точно? Ещё раз'; setTimeout(() => { delete b.dataset.sure; $('span:last-child', b).textContent = 'Удалить'; }, 4000); return; }
     DAYS = DAYS.filter(d => d.id !== day.id); cloudDelete(day); save(); go('#/diary'); };
   let timer;
@@ -2152,12 +2262,13 @@ function videoJob(day, P){
   return VID.job;
 }
 function prebuildVideo(day, P){
-  if ((navigator.hardwareConcurrency || 2) < 4 || matchMedia('(pointer: coarse)').matches) return;
+  if (SAFARI || (navigator.hardwareConcurrency || 2) < 4 || matchMedia('(pointer: coarse)').matches) return;
   const id = curPath; setTimeout(async () => { if (curPath !== id || !(await fastVideoSupported())) return; videoJob(day, P).catch(() => {}); }, 2500);
 }
+const SAFARI = IOS || (/^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent));
 async function makeVideo(day, P, canvas, btn){
   const lab = $('span:last-child', btn);
-  if (!(await fastVideoSupported())) return recordVideo(canvas, day, btn);
+  if (SAFARI || !(await fastVideoSupported())) return recordVideo(canvas, day, btn);
   btn.disabled = true; lab.textContent = VID.blob ? 'Сохраняю…' : 'Собираю видео…';
   const show = p => lab.textContent = `Собираю ${Math.round(p*100)}%`; VID.listeners.add(show);
   try {
@@ -2180,7 +2291,7 @@ function recordVideo(canvas, day, btn){
   else { if (!SOUND){ startSoundtrack(day); tempSynth = true; } }
   BUS.connect(dest); ac.resume();
   dest.stream.getAudioTracks().forEach(tr => stream.addTrack(tr));
-  const type = ['video/mp4;codecs=avc1,mp4a','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+  const type = ['video/mp4;codecs=avc1,mp4a','video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(t => MediaRecorder.isTypeSupported(t)) || '';
   let rec; try { rec = new MediaRecorder(stream, type ? { mimeType: type } : undefined); } catch (e) { toast('Не удалось начать запись: ' + (e.message || e)); return; }
   const chunks = [], cleanup = () => { try { BUS.disconnect(dest); } catch {} try { a?._src?.disconnect(dest); } catch {} if (tempSynth) stopSoundtrack(); };
   rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
@@ -2189,9 +2300,13 @@ function recordVideo(canvas, day, btn){
     cleanup(); reset();
     if (!chunks.length){ toast('Видео получилось пустым — попробуйте ещё раз'); return; }
     const mime = rec.mimeType || type || 'video/webm', ext = mime.includes('mp4') ? '.mp4' : '.webm', name = day.title + ext;
-    const url = saveBlob(new Blob(chunks, { type: mime }), name);
-    const box = $('#vidSave'); if (box) box.innerHTML = `<a class="btn sm w" href="${url}" download="${esc(name)}">${ms('download')}Сохранить видео ещё раз</a>`;
-    toast('Видео готово — проверьте загрузки');
+    const blob = new Blob(chunks, { type: mime }), file = new File([blob], name, { type: mime.split(';')[0] });
+    const canShare = IOS && navigator.canShare && navigator.canShare({ files: [file] });
+    const url = canShare ? URL.createObjectURL(blob) : saveBlob(blob, name);
+    const box = $('#vidSave');
+    if (box) box.innerHTML = canShare ? `<button class="btn sm w" id="vShare">${ms('ios_share')}Сохранить видео в Фото</button>` : `<a class="btn sm w" href="${url}" download="${esc(name)}">${ms('download')}Сохранить видео ещё раз</a>`;
+    if (canShare){ $('#vShare').onclick = () => navigator.share({ files: [file], title: day.title }).catch(() => {}); toast('Видео готово — нажмите «Сохранить видео в Фото»'); }
+    else toast('Видео готово — проверьте загрузки');
   };
   try { rec.start(1000); } catch (e) { cleanup(); toast('Не удалось начать запись: ' + (e.message || e)); return; }
   btn.disabled = true; let left = 15; lab.textContent = `Запись ${left} с`;
@@ -2463,13 +2578,14 @@ async function route(hash){
   for (const d of DAYS) if (!d.v3){ const A = analyzeText(d.text); d.title = makeTitle(A, d.vibe.scales); const st = makeStory(A, d.vibe, hashStr(d.text)); d.description = st.description; d.caption = st.caption; d.v2 = d.v3 = 1; d.rev++; migrated = true; }
   for (const d of DAYS) if (!d.v2){ const A = analyzeText(d.text); Object.assign(d.vibe.textInfo, { scene: sceneKind(A.raw), weather: weatherOf(A.raw), tod: A.tod, season: A.season }); d.title = makeTitle(A, d.vibe.scales); const st = makeStory(A, d.vibe, hashStr(d.text)); d.description = st.description; d.caption = st.caption; d.v2 = 1; d.rev++; migrated = true; }
   for (const d of DAYS){ const th = themeFromVibe(d.vibe); const sw = { bg: th.bg, accent: th.accent, ink: th.ink, onAccent: contrast(th.accent, '#111111') > 6 ? '#111111' : '#f4efe6' }; if (JSON.stringify(sw) !== JSON.stringify(d.vibe.swatch)){ d.vibe.swatch = sw; migrated = true; } }
+  for (const d of DAYS) if (d.demo && /open\.spotify\.com\/search/.test(d.music?.url || '')){ const src = DEMO.find(x => x.id === d.id); if (src){ const m = musicFromLink(src.music.url, src.music.label, src.music.tempo, src.music.mode); d.music = { ...d.music, url: m.url, service: m.service, embed: m.embed }; d.rev++; migrated = true; } }
   if (migrated) save();
   seedCapsules(false);
   const onNav = () => { if ((location.hash || '#/') !== curPath) route(location.hash); };
   window.addEventListener('hashchange', onNav); window.addEventListener('popstate', onNav);
   if ('speechSynthesis' in window) speechSynthesis.getVoices();
   route();
-  sbInit();
+  sbInit(); probeTTS();
 })();
 </script>
 </body>
