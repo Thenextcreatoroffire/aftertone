@@ -1848,6 +1848,7 @@ async function viewDay(id){
     <div class="player"><div class="lb-sm up out">Голос и атмосфера</div>
       <div class="ctas" style="margin-top:10px"><button class="btn sec sm" id="bVoice">${ms('record_voice_over')}<span>Озвучка</span></button><button class="btn sec sm" id="bAmb">${ms(ambName(day)[1])}<span>${ambName(day)[0]}</span></button></div></div>
     <div class="ctas"><button class="btn" id="bPng">${ms('download')}PNG</button><button class="btn sec" id="bVid">${ms('movie')}<span>Видео 15 с</span></button></div>
+    <div id="vidSave"></div>
     <div class="ctas"><button class="btn sec sm" id="bRe">${ms('auto_fix_high')}Пересоздать дизайн</button><button class="btn sec sm" id="bDel">${ms('delete')}<span>Удалить</span></button></div>
     </div><div class="col">
     <section class="card"><div class="row" style="margin-bottom:4px"><div class="row" style="gap:8px">${ms('queue_music')}<span class="h-sm">Подборка, чтобы вернуться в этот день</span></div></div><p class="b-sm out" style="margin-bottom:8px">Песни с похожей атмосферой: ${esc(moodOf(day.vibe).label.toLowerCase())}</p>
@@ -1915,7 +1916,7 @@ async function viewDay(id){
   $('#bAmb').onclick = () => { const on = !AMB; if (on){ startAmbient(day); audioCtx().resume(); } else stopAmbient(); $('#bAmb').classList.toggle('on', on); $('span:first-child', $('#bAmb')).textContent = on ? 'stop_circle' : ambName(day)[1]; };
   $('#bVoice').onclick = () => speak(day, on => { $('#bVoice').innerHTML = `${ms(on ? 'stop_circle' : 'record_voice_over')}<span>${on ? 'Остановить' : 'Озвучка'}</span>`; });
   $('#phs').innerHTML = P.raw.map((im, k) => { const cc = makeCanvas(300, 336); drawCover(cc.getContext('2d'), im, 0, 0, 300, 336, 1, 0, 0); return `<div class="tile"><img src="${cc.toDataURL('image/jpeg', 0.8)}" alt="Фото ${k + 1}"></div>`; }).join('');
-  const png = () => { const a = document.createElement('a'); a.download = day.title + '.png'; a.href = c.toDataURL('image/png'); a.click(); };
+  const png = () => c.toBlob(b => { if (b){ saveBlob(b, day.title + '.png'); toast('Картинка сохранена — проверьте загрузки'); } else toast('Не удалось сохранить картинку'); }, 'image/png');
   $('#bPng').onclick = png; $('#tPng').onclick = png;
   $('#bVid').onclick = e => recordVideo(c, day, e.currentTarget);
   $('#bRe').onclick = async () => {
@@ -1930,18 +1931,39 @@ async function viewDay(id){
   });
 }
 let ac;
+function saveBlob(blob, name){
+  const url = URL.createObjectURL(blob), l = document.createElement('a');
+  l.href = url; l.download = name; l.style.display = 'none'; document.body.appendChild(l); l.click();
+  setTimeout(() => l.remove(), 1000); setTimeout(() => URL.revokeObjectURL(url), 120000);
+  return url;
+}
 function recordVideo(canvas, day, btn){
   if (!window.MediaRecorder || !canvas.captureStream){ toast('Запись видео не поддерживается этим браузером'); return; }
-  const stream = canvas.captureStream(30), a = $('#player audio');
-  if (!a && SOUND && BUS){ const dest = AC.createMediaStreamDestination(); BUS.connect(dest); dest.stream.getAudioTracks().forEach(tr => stream.addTrack(tr)); }
-  if (a){ try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (!a._src){ a._src = ac.createMediaElementSource(a); a._src.connect(ac.destination); } const dest = ac.createMediaStreamDestination(); a._src.connect(dest); dest.stream.getAudioTracks().forEach(tr => stream.addTrack(tr)); a.currentTime = 0; a.play(); } catch (err) { console.warn(err); } }
-  const type = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'].find(t => MediaRecorder.isTypeSupported(t)) || '';
-  const rec = new MediaRecorder(stream, type ? {mimeType: type} : undefined), chunks = [], lab = $('span:last-child', btn);
-  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
-  rec.onstop = () => { const blob = new Blob(chunks, {type: rec.mimeType}); const l = document.createElement('a'); l.download = day.title + (rec.mimeType.includes('mp4') ? '.mp4' : '.webm'); l.href = URL.createObjectURL(blob); l.click(); lab.textContent = 'Видео 15 с'; btn.disabled = false; };
-  rec.start(); btn.disabled = true; let left = 15; lab.textContent = `Запись ${left} с`;
-  const iv = setInterval(() => { left--; lab.textContent = `Запись ${left} с`; if (left <= 0){ clearInterval(iv); rec.stop(); } }, 1000);
-  if (!a && !SOUND) toast('Чтобы в видео был звук, сначала включите саундтрек дня.');
+  const lab = $('span:last-child', btn), reset = () => { lab.textContent = 'Видео 15 с'; btn.disabled = false; };
+  let stream, tempSynth = false;
+  try { stream = canvas.captureStream(30); } catch (e) { toast('Браузер не дал записать картину: ' + (e.message || e)); return; }
+  const ac = audioCtx(), dest = ac.createMediaStreamDestination(), a = $('#player audio');
+  if (a && !a.paused){ try { if (!a._src){ a._src = ac.createMediaElementSource(a); a._src.connect(ac.destination); } a._src.connect(dest); } catch (e) { console.warn(e); } }
+  else { if (!SOUND){ startSoundtrack(day); tempSynth = true; } }
+  BUS.connect(dest); ac.resume();
+  dest.stream.getAudioTracks().forEach(tr => stream.addTrack(tr));
+  const type = ['video/mp4;codecs=avc1,mp4a','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+  let rec; try { rec = new MediaRecorder(stream, type ? { mimeType: type } : undefined); } catch (e) { toast('Не удалось начать запись: ' + (e.message || e)); return; }
+  const chunks = [], cleanup = () => { try { BUS.disconnect(dest); } catch {} try { a?._src?.disconnect(dest); } catch {} if (tempSynth) stopSoundtrack(); };
+  rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  rec.onerror = e => { clearInterval(iv); cleanup(); reset(); toast('Запись прервалась: ' + (e.error?.message || 'ошибка браузера')); };
+  rec.onstop = () => {
+    cleanup(); reset();
+    if (!chunks.length){ toast('Видео получилось пустым — попробуйте ещё раз'); return; }
+    const mime = rec.mimeType || type || 'video/webm', ext = mime.includes('mp4') ? '.mp4' : '.webm', name = day.title + ext;
+    const url = saveBlob(new Blob(chunks, { type: mime }), name);
+    const box = $('#vidSave'); if (box) box.innerHTML = `<a class="btn sm w" href="${url}" download="${esc(name)}">${ms('download')}Сохранить видео ещё раз</a>`;
+    toast('Видео готово — проверьте загрузки');
+  };
+  try { rec.start(1000); } catch (e) { cleanup(); toast('Не удалось начать запись: ' + (e.message || e)); return; }
+  btn.disabled = true; let left = 15; lab.textContent = `Запись ${left} с`;
+  const iv = setInterval(() => { left--; lab.textContent = left > 0 ? `Запись ${left} с` : 'Сохраняю…'; if (left <= 0){ clearInterval(iv); try { rec.requestData(); } catch {} rec.stop(); } }, 1000);
+  if (tempSynth) toast('В видео будет звучать саундтрек дня');
 }
 
 /* ---------- календарь ---------- */
