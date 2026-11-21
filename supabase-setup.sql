@@ -21,6 +21,9 @@ create table if not exists public.capsules (
   primary key (user_id, id)
 );
 
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on public.days, public.capsules to authenticated;
+
 alter table public.days     enable row level security;
 alter table public.capsules enable row level security;
 

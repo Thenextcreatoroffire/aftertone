@@ -1458,11 +1458,11 @@ async function fillThumbs(root = document){
 /* ---------- шапка и меню ---------- */
 function setTab(r){ $$('.tabs a').forEach(a => a.classList.toggle('on', a.dataset.r === r)); }
 function topBrand(){
-  $('#top').innerHTML = `<span class="brand">AFTERTONE</span><div><button class="ibtn" id="me" aria-label="О прототипе">${ms('person')}</button></div>`;
+  $('#top').innerHTML = `<span class="brand">AFTERTONE</span><div><button class="ibtn" id="me" aria-label="Профиль">${ms('person')}</button></div>`;
   $('#me').onclick = () => {
     const ex = $('.sheet'); if (ex){ ex.remove(); return; }
     const s = document.createElement('div'); s.className = 'sheet';
-    s.innerHTML = `<div class="h-sm" style="margin-bottom:6px">${USER ? esc(USER.email) : 'Aftertone'}</div>${USER ? '<span id="syncSt">' + (syncLabel() || 'Дни сохраняются в облаке') + '</span>' : SUPABASE_KEY ? 'Войдите, чтобы дни сохранялись в облаке и открывались на любом устройстве.' : 'Дни и капсулы хранятся в этом браузере.'}${SUPABASE_KEY ? `<a class="btn sm w" href="#/login" style="margin-top:12px">${USER ? 'Аккаунт' : 'Войти или зарегистрироваться'}</a>` : ''}<button class="btn sec sm" id="aiTest">Проверить ИИ-картинку</button><div id="aiRes" class="b-sm" style="margin-top:8px"></div><button class="btn sec sm" id="reset">Вернуть демо-дни</button>`;
+    s.innerHTML = `<div class="h-sm trunc" style="margin-bottom:2px">${USER ? esc(userName()) : 'Aftertone'}</div>${USER ? `<div class="b-sm trunc mut" style="font-size:12px;margin-bottom:8px">${esc(USER.email)}</div>` : ''}${USER ? '<span id="syncSt">' + (syncLabel() || 'Дни сохраняются в облаке') + '</span>' : SUPABASE_KEY ? 'Войдите, чтобы дни сохранялись в облаке и открывались на любом устройстве.' : 'Дни и капсулы хранятся в этом браузере.'}${SUPABASE_KEY ? `<a class="btn sm w" href="#/login" style="margin-top:12px">${USER ? 'Аккаунт' : 'Войти или зарегистрироваться'}</a>` : ''}<button class="btn sec sm" id="aiTest">Проверить ИИ-картинку</button><div id="aiRes" class="b-sm" style="margin-top:8px"></div>${USER ? '' : '<button class="btn sec sm" id="reset">Вернуть демо-дни</button>'}`;
     $('#top').appendChild(s);
     $('#aiTest').onclick = async () => {
       const res = $('#aiRes');
@@ -1475,7 +1475,7 @@ function topBrand(){
         res.innerHTML = j.image ? `Работает ✓ модель: ${esc(j.model || '?')}, ${sec} с${j.warnings && j.warnings.length ? '<br>Предупреждения: ' + esc(j.warnings.join('; ').slice(0, 200)) : ''}<img src="${j.image}" style="width:100%;border-radius:8px;margin-top:8px">` : `Не работает ✗ ${esc(String(j.error || 'HTTP ' + r.status).slice(0, 240))}`;
       } catch (e) { res.textContent = 'Нет связи с воркером: ' + (e.message || e) + '. Проверьте адрес и что воркер задеплоен.'; }
     };
-    $('#reset').onclick = async e => { const b = e.currentTarget; if (!b.dataset.sure){ b.dataset.sure = 1; b.textContent = 'Свои записи удалятся. Нажми ещё раз'; return; }
+    if ($('#reset')) $('#reset').onclick = async e => { const b = e.currentTarget; if (!b.dataset.sure){ b.dataset.sure = 1; b.textContent = 'Свои записи удалятся. Нажми ещё раз'; return; }
       prepCache.clear(); thumbCache.clear(); photoThumbCache.clear(); await seedDemo(); seedCapsules(true); s.remove(); go('#/'); };
   };
 }
@@ -1854,7 +1854,7 @@ let CAPS = [];
 function saveCaps(){ scheduleSync(); if (!storageOK) return; try { localStorage.setItem(CKEY, JSON.stringify(CAPS)); } catch {} }
 function seedCapsules(force){
   let st = null; if (!force){ try { st = JSON.parse(localStorage.getItem(CKEY) || 'null'); } catch {} }
-  if (st) { CAPS = st; return; }
+  if (st) { CAPS = st.map(c => (c.id === 'c1' || c.id === 'c2') ? { ...c, demo: true } : c); return; }
   const t = todayISO(), [yy] = t.split('-').map(Number);
   CAPS = [
     { id:'c1', demo:true, created:'2026-11-08', open:`${yy + 1}-05-08`, text:'Письмо из осеннего парка. Помни, как было холодно и как грело какао. Если сейчас тяжело — выйди погулять, листья всегда возвращаются.', music:'Frank Sinatra — Fly Me to the Moon' },
@@ -1912,6 +1912,7 @@ let SB = null, USER = null, SYNC = 'off', syncTimer = null, syncing = false;
 const d2b = d => fetch(d).then(r => r.blob());
 const b2d = b => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(b); });
 function setSync(st){ SYNC = st; const el = $('#syncSt'); if (el) el.textContent = syncLabel(); }
+const userName = () => (USER?.user_metadata?.name || '').trim() || (USER?.email || '').split('@')[0];
 const syncLabel = () => ({ off:'', idle:'Синхронизировано ✓', busy:'Сохраняю в облако…', error:'Не удалось сохранить в облако, попробую ещё раз', offline:'Нет связи с облаком — дни сохранены в браузере' })[SYNC] || '';
 async function sbInit(){
   if (!SUPABASE_URL || !SUPABASE_KEY) return;
@@ -1991,34 +1992,54 @@ async function signOut(){
   if (!DAYS.length) await seedDemo();
 }
 const AUTH_ERR = m => /Invalid login credentials/i.test(m) ? 'Неверная почта или пароль' : /already registered|already been registered/i.test(m) ? 'Такой аккаунт уже есть — нажмите «Войти»' : /Password should be at least/i.test(m) ? 'Пароль — минимум 6 символов' : /Email not confirmed/i.test(m) ? 'Почта не подтверждена — откройте письмо от Supabase' : /valid email|invalid format/i.test(m) ? 'Проверьте адрес почты' : /rate limit/i.test(m) ? 'Слишком много попыток, подождите минуту' : m;
+let loginMode = 'in';
 function viewLogin(){
-  setTab(''); topBack('#/', 'Вход');
+  setTab(''); topBack('#/', USER ? 'Аккаунт' : 'Вход');
   if (!SUPABASE_KEY){ app.innerHTML = `<div class="stack fade-in"><section class="card"><p class="b-md">Облако ещё не подключено.</p></section></div>`; return; }
+  const up = loginMode === 'up';
   app.innerHTML = `<div class="stack fade-in" style="max-width:440px;margin:0 auto">
-    <section><h1 class="h-dl">${USER ? 'Ваш аккаунт' : 'Войти в дневник'}</h1><p class="b-md" style="margin-top:6px">${USER ? esc(USER.email) : 'Чтобы дни сохранялись в облаке и открывались на любом устройстве'}</p></section>
-    ${USER ? `<section class="card"><div class="b-md" id="syncSt" style="color:var(--on)">${syncLabel() || 'Подключено'}</div><p class="b-sm" style="margin-top:6px">Демо-дни остаются только в этом браузере, ваши записи — в облаке.</p></section>
+    <section><h1 class="h-dl" style="overflow-wrap:anywhere">${USER ? esc(userName()) : up ? 'Создать аккаунт' : 'Войти в дневник'}</h1><p class="b-md" style="margin-top:6px;overflow-wrap:anywhere">${USER ? esc(USER.email) : 'Чтобы дни сохранялись в облаке и открывались на любом устройстве'}</p></section>
+    ${USER ? `<section class="card" style="display:flex;flex-direction:column;gap:10px">
+        <label class="lb-md mut" for="nm">Имя или никнейм</label>
+        <input class="field" id="nm" maxlength="24" autocomplete="nickname" value="${esc((USER.user_metadata?.name || '').trim())}" placeholder="Как вас называть">
+        <p class="b-sm" id="nmsg" style="color:var(--on)"></p>
+        <button class="btn sec w" id="nsave">Сохранить имя</button></section>
+      <section class="card"><div class="b-md" id="syncSt" style="color:var(--on)">${syncLabel() || 'Подключено'}</div><p class="b-sm" style="margin-top:6px">Демо-дни остаются только в этом браузере, ваши записи — в облаке.</p></section>
       <button class="btn sec w" id="out">${ms('logout')}Выйти</button>`
     : `<section class="card" style="display:flex;flex-direction:column;gap:10px">
+        ${up ? '<input class="field" id="nm" maxlength="24" autocomplete="nickname" placeholder="Имя или никнейм" aria-label="Имя или никнейм">' : ''}
         <input class="field" id="em" type="email" autocomplete="email" placeholder="Почта" aria-label="Почта">
-        <input class="field" id="pw" type="password" autocomplete="current-password" placeholder="Пароль, минимум 6 символов" aria-label="Пароль">
+        <input class="field" id="pw" type="password" autocomplete="${up ? 'new-password' : 'current-password'}" placeholder="${up ? 'Пароль, минимум 6 символов' : 'Пароль'}" aria-label="Пароль">
         <p class="err" id="lerr"></p><p class="b-sm" id="lmsg" style="color:var(--on)"></p>
-        <button class="btn w" id="in">Войти</button>
-        <button class="btn sec w" id="up">Создать аккаунт</button></section>
+        <button class="btn w" id="go1">${up ? 'Создать аккаунт' : 'Войти'}</button>
+        <button class="btn sec w" id="sw">${up ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Создать'}</button></section>
       <a class="lb-md mut" href="#/" style="text-align:center">Продолжить без входа</a>`}
   </div>`;
-  if (USER){ $('#out').onclick = async () => { await signOut(); go('#/'); }; return; }
-  const run = async signup => {
-    const email = $('#em').value.trim(), password = $('#pw').value; $('#lerr').textContent = ''; $('#lmsg').textContent = '';
+  if (USER){
+    $('#out').onclick = async () => { await signOut(); go('#/'); };
+    $('#nsave').onclick = async () => {
+      const name = $('#nm').value.trim().slice(0, 24); $('#nmsg').textContent = 'Сохраняю…';
+      const { data, error } = await SB.auth.updateUser({ data: { name } });
+      if (error){ $('#nmsg').textContent = 'Не получилось: ' + AUTH_ERR(error.message); return; }
+      USER = data.user; $('#nmsg').textContent = 'Сохранено ✓'; $('h1', app).textContent = userName();
+    };
+    return;
+  }
+  $('#sw').onclick = () => { loginMode = up ? 'in' : 'up'; viewLogin(); };
+  const run = async () => {
+    const email = $('#em').value.trim(), password = $('#pw').value, name = up ? $('#nm').value.trim().slice(0, 24) : '';
+    $('#lerr').textContent = ''; $('#lmsg').textContent = '';
+    if (up && !name){ $('#lerr').textContent = 'Введите имя или никнейм'; return; }
     if (!email || !password){ $('#lerr').textContent = 'Введите почту и пароль'; return; }
     if (!SB){ $('#lerr').textContent = 'Нет связи с облаком. Проверьте интернет и обновите страницу.'; return; }
-    $('#lmsg').textContent = signup ? 'Создаю аккаунт…' : 'Вхожу…';
-    const res = signup ? await SB.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + location.pathname } }) : await SB.auth.signInWithPassword({ email, password });
+    $('#lmsg').textContent = up ? 'Создаю аккаунт…' : 'Вхожу…';
+    const res = up ? await SB.auth.signUp({ email, password, options: { data: { name }, emailRedirectTo: location.origin + location.pathname } }) : await SB.auth.signInWithPassword({ email, password });
     if (res.error){ $('#lmsg').textContent = ''; $('#lerr').textContent = AUTH_ERR(res.error.message); return; }
-    if (signup && !res.data.session){ $('#lmsg').textContent = 'Готово! Мы отправили письмо на ' + email + ' — подтвердите почту и войдите.'; return; }
+    if (up && !res.data.session){ $('#lmsg').textContent = 'Готово! Мы отправили письмо на ' + email + ' — подтвердите почту и войдите.'; loginMode = 'in'; return; }
     $('#lmsg').textContent = 'Загружаю ваши дни…';
   };
-  $('#in').onclick = () => run(false); $('#up').onclick = () => run(true);
-  $('#pw').onkeydown = e => { if (e.key === 'Enter') run(false); };
+  $('#go1').onclick = run;
+  $('#pw').onkeydown = e => { if (e.key === 'Enter') run(); };
 }
 
 /* ---------- навигация ---------- */
