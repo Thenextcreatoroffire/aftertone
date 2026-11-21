@@ -196,7 +196,35 @@ details.acc{background:var(--low);border-radius:16px}
 .imm-title{font:700 clamp(28px,6vw,48px)/1.08 var(--head);margin:6px 0 8px;text-shadow:0 2px 20px rgba(0,0,0,.4)}
 .imm-hint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.55);backdrop-filter:blur(10px);padding:12px 18px;border-radius:12px;font:500 14px var(--body);z-index:2;text-align:center;max-width:80vw}
 .imm.vr .imm-top{opacity:.35}
-.enter{display:grid;grid-template-columns:1fr auto;gap:10px}
+.col{display:contents}
+.pl{display:none}
+@media (min-width:1000px){
+  body{padding-left:248px}
+  .app{max-width:1180px;padding:0 40px 64px}
+  .top{margin:0 -40px;padding:0 40px}
+  .tabs{top:0;bottom:0;right:auto;width:248px;border-top:0;border-right:1px solid var(--low);background:var(--lowest)}
+  .tabs .in{max-width:none;height:100%;flex-direction:column;justify-content:flex-start;align-items:stretch;padding:72px 16px 24px;gap:4px}
+  .tabs a{flex-direction:row;gap:14px;font:500 14px var(--body);padding:11px 14px;border-radius:12px;min-width:0}
+  .tabs a.on{background:var(--cont)}
+  .tabs a:hover{background:var(--low);color:var(--on)}
+  .tabs a .ms{font-size:22px}
+  .tabs a.plus{order:-1;width:auto;height:46px;border-radius:999px;justify-content:center;margin-bottom:16px;font:600 14px var(--head);color:#000}
+  .tabs a.plus:hover{background:var(--primary);opacity:.9}
+  .tabs a.plus.on{background:var(--primary);color:#000}
+  .tabs a.plus .pl{display:inline}
+  .stack.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px 40px;align-items:start}
+  .stack.two.wideL{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
+  .stack.two.dayv{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)}
+  .stack.two>.F{grid-column:1/-1}
+  .stack.two>.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+  .stack.two>.col.sticky{position:sticky;top:76px}
+  .dayv .poster canvas{max-height:calc(100vh - 330px);width:auto;max-width:100%;margin:0 auto}
+  .list.d2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid2{grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+  .h-dl{font-size:34px;line-height:41px}
+  .toast{bottom:24px;left:calc(50% + 124px)}
+  .sheet{right:40px}
+}
 details.acc>summary{list-style:none;cursor:pointer;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;user-select:none;border-radius:16px}
 details.acc>summary::-webkit-details-marker{display:none}
 details.acc>summary:hover{background:var(--cont)}
@@ -216,7 +244,7 @@ details.acc .hint-n{font:500 11px var(--body);color:var(--outline);margin-left:a
 <nav class="tabs" aria-label="Основное меню"><div class="in">
   <a href="#/" data-r="home"><span class="ms">home</span>Главная</a>
   <a href="#/diary" data-r="diary"><span class="ms">menu_book</span>Дневник</a>
-  <a href="#/new" data-r="new" class="plus" aria-label="Новая запись"><span class="ms">add</span></a>
+  <a href="#/new" data-r="new" class="plus" aria-label="Новая запись"><span class="ms">add</span><span class="pl">Новая запись</span></a>
   <a href="#/capsule" data-r="capsule"><span class="ms">hourglass_empty</span>Капсула</a>
   <a href="#/calendar" data-r="calendar"><span class="ms">calendar_month</span>Календарь</a>
 </div></nav>
@@ -1324,25 +1352,28 @@ async function viewHome(){
   let path = `M${pts[0][0]},${pts[0][1]}`; for (let i = 1; i < pts.length; i++){ const [x0, y0] = pts[i-1], [x1, y1] = pts[i], dx = (x1 - x0) / 2; path += ` C${x0 + dx},${y0} ${x1 - dx},${y1} ${x1},${y1}`; }
   const lastP = pts.at(-1), delta = w7.length > 1 ? Math.round((w7.at(-1).vibe.scales.energy - w7.at(-2).vibe.scales.energy) * 100) : 0;
   const recent = sorted().reverse().slice(1, 5);
-  app.innerHTML = `<div class="stack fade-in">
-    <section><div class="row"><span class="lb-sm up mut">${WEEK[now.getDay()]}, ${now.getDate()} ${MONTHS[now.getMonth()]}</span><span class="pill"><span class="dot"></span>Вайб дня</span></div>
+  app.innerHTML = `<div class="stack fade-in two wideL">
+    <section class="F"><div class="row"><span class="lb-sm up mut">${WEEK[now.getDay()]}, ${now.getDate()} ${MONTHS[now.getMonth()]}</span><span class="pill"><span class="dot"></span>Вайб дня</span></div>
       <h1 class="h-dl" style="margin-top:8px">${greet}</h1><p class="b-md" style="margin-top:4px">Ваши дни, сохранённые по чувствам</p></section>
-    <a class="card capture" href="#/new"><div style="min-width:0"><div class="row" style="justify-content:flex-start;gap:8px"><span class="ms f pri" style="font-size:18px">edit_note</span><span class="lb-md up" style="color:var(--onv);letter-spacing:.06em">Вечерняя запись</span></div>
-      <h2 class="h-sm" style="margin:6px 0 2px">Запечатлеть сегодняшний день</h2><p class="b-sm trunc">Текст, фото и песня, которая звучала</p></div><span class="ibtn">${ms('add')}</span></a>
+    <div class="col">
     <section><div class="row" style="margin-bottom:8px"><span class="h-sm">Главное воспоминание</span><a class="lb-md mut" href="#/day/${d.id}" style="display:inline-flex;align-items:center;gap:2px">Открыть <span class="ms" style="font-size:16px">arrow_forward</span></a></div>
       <article class="feat"><a href="#/day/${d.id}" class="media" style="display:block"><canvas id="fc" width="1200" height="900" aria-label="Фото дня"></canvas>
         <span class="ovl" style="top:12px;left:12px">${ms('music_note')}<span>${esc(d.music.label)}</span></span>
         <div class="row" style="position:absolute;z-index:2;left:12px;right:12px;bottom:12px"><span class="lb-md pri">${fmtLong(d.date)}</span><span class="ovl" style="position:static;background:color-mix(in oklab,var(--highest) 80%,transparent)">${ms(mood.icon, 1)}<span>${mood.label}</span></span></div></a>
         <div class="body"><h3 class="h-lg">${esc(d.title)}</h3><p class="b-md">${esc(d.description)}</p>
           <div class="mini"><div class="row" style="gap:12px;justify-content:flex-start"><button class="ibtn" id="hv" aria-label="Озвучить запись"><span class="ms f">play_arrow</span></button><div><div class="lb-md pri">Озвучка дня</div><div class="lb-md mut" style="font-size:11px">голос: ${esc(d.vibe.voice.label)}</div></div></div><div class="wave">${bars}</div></div></div></article></section>
+    </div><div class="col">
+    <a class="card capture" href="#/new"><div style="min-width:0"><div class="row" style="justify-content:flex-start;gap:8px"><span class="ms f pri" style="font-size:18px">edit_note</span><span class="lb-md up" style="color:var(--onv);letter-spacing:.06em">Вечерняя запись</span></div>
+      <h2 class="h-sm" style="margin:6px 0 2px">Запечатлеть сегодняшний день</h2><p class="b-sm trunc">Текст, фото и песня, которая звучала</p></div><span class="ibtn">${ms('add')}</span></a>
     <section><div class="row" style="margin-bottom:8px"><span class="h-sm">Недавние настроения</span><span class="lb-md out">Последние ${last14.length} записей</span></div><div class="moods">${pills}</div></section>
     <section class="card"><div class="row"><div><div class="h-sm">Эмоциональная волна</div><div class="lb-md out" style="margin-top:2px">Энергия последних ${w7.length} записей</div></div><div class="lb-md pri" style="display:flex;align-items:center;gap:4px">${delta >= 0 ? '+' : '−'}${Math.abs(delta)}%${ms(delta >= 0 ? 'trending_up' : 'trending_down')}</div></div>
       <svg viewBox="0 0 320 80" preserveAspectRatio="none" style="width:100%;height:96px;overflow:visible;margin-top:8px" aria-label="График энергии по дням"><defs><linearGradient id="wf" x1="0" x2="0" y1="0" y2="1"><stop offset="0" style="stop-color:var(--aura);stop-opacity:.25"/><stop offset="1" style="stop-color:var(--aura);stop-opacity:0"/></linearGradient></defs>
         <path d="${path} L${lastP[0]},80 L${pts[0][0]},80 Z" fill="url(#wf)"/><path d="${path}" style="stroke:var(--aura)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
         <circle cx="${lastP[0]}" cy="${lastP[1]}" r="4" style="fill:var(--primary)"/><circle cx="${lastP[0]}" cy="${lastP[1]}" r="8" fill="none" style="stroke:var(--primary)" stroke-opacity=".4" stroke-width="1.5"/></svg>
       <div class="row lb-sm out" style="letter-spacing:0;margin-top:6px">${w7.map((x, i) => `<span style="${i === w7.length - 1 ? 'color:var(--primary)' : ''}">${shortDate(x.date)}</span>`).join('')}</div></section>
-    <section><div class="row" style="margin-bottom:8px"><span class="h-sm">Недавние моменты</span><a class="lb-md mut" href="#/diary">Все записи</a></div>
-      <div class="list">${recent.map(x => { const m = moodOf(x.vibe); return `<a class="item" href="#/day/${x.id}"><img data-photo="${x.id}" alt=""><div class="t"><div class="row"><span class="h-sm trunc" style="font-size:15px">${esc(x.title)}</span><span class="lb-md out" style="flex:none">${shortDate(x.date)}</span></div><span class="b-sm trunc">${esc(x.caption)}</span><span class="lb-md" style="color:var(--onv);margin-top:2px">${m.short} <span class="out">•</span> <span class="out">${TECH[x.vibe.technique].name}</span></span></div></a>`; }).join('')}</div></section>
+    </div>
+    <section class="F"><div class="row" style="margin-bottom:8px"><span class="h-sm">Недавние моменты</span><a class="lb-md mut" href="#/diary">Все записи</a></div>
+      <div class="list d2">${recent.map(x => { const m = moodOf(x.vibe); return `<a class="item" href="#/day/${x.id}"><img data-photo="${x.id}" alt=""><div class="t"><div class="row"><span class="h-sm trunc" style="font-size:15px">${esc(x.title)}</span><span class="lb-md out" style="flex:none">${shortDate(x.date)}</span></div><span class="b-sm trunc">${esc(x.caption)}</span><span class="lb-md" style="color:var(--onv);margin-top:2px">${m.short} <span class="out">•</span> <span class="out">${TECH[x.vibe.technique].name}</span></span></div></a>`; }).join('')}</div></section>
   </div>`;
   const x = $('#fc').getContext('2d');
   loop(t => { drawPhotoLayer(x, d, P, t, 0, 0, 1200, 900); drawGrain(x, P, t, 1200, 900); });
@@ -1367,7 +1398,7 @@ async function viewDiary(){
     if (!items.length){ $('#dl').innerHTML = '<p class="b-md" style="text-align:center;padding:24px 0">Ничего не нашлось</p>'; return; }
     $('#dl').innerHTML = diaryState.view === 'grid'
       ? `<div class="grid2">${items.map(d => `<a href="#/day/${d.id}"><img data-thumb="${d.id}" alt="${esc(d.title)}"><div class="lb-md pri trunc" style="margin-top:8px">${esc(d.title)}</div><div class="lb-md out">${shortDate(d.date)} · ${TECH[d.vibe.technique].name}</div></a>`).join('')}</div>`
-      : `<div class="list">${items.map(d => { const m = moodOf(d.vibe); return `<a class="dcard" href="#/day/${d.id}"><div class="cov"><img data-photo="${d.id}" alt=""></div>
+      : `<div class="list d2">${items.map(d => { const m = moodOf(d.vibe); return `<a class="dcard" href="#/day/${d.id}"><div class="cov"><img data-photo="${d.id}" alt=""></div>
           <div class="row"><span class="pill">${ms(m.icon)}${m.short}</span><span class="lb-md out">${shortDate(d.date)}</span></div>
           <h3 class="h-md">${esc(d.title)}</h3><p class="b-sm" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(d.text)}</p>
           <div class="mini"><div class="row" style="gap:10px;justify-content:flex-start;min-width:0"><span class="ibtn" style="width:32px;height:32px">${ms('play_arrow', 1)}</span><div style="min-width:0"><div class="lb-md pri trunc">${esc(d.music.label)}</div><div class="lb-md out" style="font-size:11px">${d.vibe.music.bpm} bpm • ${TECH[d.vibe.technique].name}</div></div></div></div></a>`; }).join('')}</div>`;
@@ -1385,14 +1416,16 @@ function viewNew(){
   const state = { photos: [], audio: null, tempo: null, mode: null };
   const today = todayISO();
   const dateLabel = v => { const [y, m, d] = v.split('-').map(Number); return (v === today ? 'Сегодня, ' : '') + `${d} ${MONTHS[m-1]}${y !== new Date().getFullYear() ? ' ' + y : ''}`; };
-  app.innerHTML = `<div class="stack fade-in">
-    <div class="steps" id="steps"><span class="step on" data-s="1"><b>1</b>История</span><hr><span class="step" data-s="2"><b>2</b>Фото</span><hr><span class="step" data-s="3"><b>3</b>Музыка</span><hr><span class="step" data-s="4"><b>4</b>Синтез</span></div>
-    <section><h1 class="h-dl">Что вы чувствовали сегодня?</h1>
+  app.innerHTML = `<div class="stack fade-in two">
+    <div class="F steps" id="steps"><span class="step on" data-s="1"><b>1</b>История</span><hr><span class="step" data-s="2"><b>2</b>Фото</span><hr><span class="step" data-s="3"><b>3</b>Музыка</span><hr><span class="step" data-s="4"><b>4</b>Синтез</span></div>
+    <section class="F"><h1 class="h-dl">Что вы чувствовали сегодня?</h1>
       <label class="datepill" style="margin-top:12px">${ms('calendar_today')}<span id="dlab">${dateLabel(today)}</span>${ms('expand_more')}<input type="date" id="date" value="${today}" aria-label="Дата записи"></label></section>
+    <div class="col">
     <section><div class="ta"><textarea id="text" placeholder="Мы гуляли по парку, всё было усыпано жёлтыми листьями. Было холодно, но мы пили какао и говорили часами…" aria-label="Текст о дне"></textarea>
       <div class="row"><span class="lb-md out" style="display:flex;align-items:center;gap:6px">${ms('notes')}<span id="cnt">0 знаков</span></span></div></div><p class="err" id="e-text"></p>
       <div class="lb-sm up mut" style="display:flex;align-items:center;gap:6px;margin:16px 0 10px"><span class="ms" style="font-size:16px">auto_awesome</span>Детали атмосферы</div>
       <div class="chips" id="atm"><button class="chip" data-p="Запах: ">${ms('air')}Какой был запах?</button><button class="chip" data-p="Рядом были: ">${ms('group')}Кто был рядом?</button><button class="chip" data-p="Погода: ">${ms('cloud')}Какая была погода?</button><button class="chip" data-p="Звуки вокруг: ">${ms('hearing')}Что звучало вокруг?</button></div></section>
+    </div><div class="col">
     <section><div class="row" style="margin-bottom:10px"><span class="h-md">Фотографии</span><span class="lb-md mut" id="pc">0 из 6</span></div>
       <input type="file" id="ph" accept="image/*" multiple hidden><div class="tiles" id="tiles"></div><p class="err" id="e-ph"></p></section>
     <section><div class="h-md" style="margin-bottom:10px">Фоновая музыка</div>
@@ -1404,7 +1437,8 @@ function viewNew(){
         <label class="btn sec sm" style="align-self:flex-start">${ms('upload')}<span id="auName">Или загрузить аудиофайл</span><input type="file" id="au" accept="audio/*" hidden></label>
         <p class="b-sm out" style="font-size:12px">Файл анализируется в браузере и не сохраняется: чужие песни целиком хранить нельзя.</p></div>
       <p class="err" id="e-mu"></p></section>
-    <section><button class="btn w" id="go">Трансформировать в арт-воспоминание</button><p class="note">Система подберёт палитру, художественный приём, ритм кадров и голос под атмосферу дня</p></section>
+    </div>
+    <section class="F"><button class="btn w" id="go">Трансформировать в арт-воспоминание</button><p class="note">Система подберёт палитру, художественный приём, ритм кадров и голос под атмосферу дня</p></section>
   </div>`;
   const steps = () => {
     const ok1 = $('#text').value.trim().length >= 20, ok2 = state.photos.length > 0, ok3 = !!($('#link').value.trim() || state.audio);
@@ -1467,7 +1501,7 @@ async function createDay(input){
 
 /* ---------- раскрывающиеся разделы ---------- */
 function accordion(root, openTitles = []){
-  for (const sec of $$('.stack > section.card', root)){
+  for (const sec of $$('.stack section.card', root)){
     const head = sec.firstElementChild; if (!head) continue;
     const title = head.textContent.trim();
     const d = document.createElement('details'); d.className = 'acc'; if (openTitles.some(t => title.startsWith(t))) d.open = true;
@@ -1487,8 +1521,9 @@ async function viewDay(id){
   const list = sorted(), i = list.findIndex(d => d.id === id), prev = list[i-1], next = list[i+1];
   const m = day.music, num = dayNum(day), sUrl = await songUrl(day), pl = playlistFor(day), smell = scentsFor(day), media = mediaFor(day);
   const sc = [['warmth','Тепло'],['energy','Энергия'],['tension','Напряжение'],['tempo','Темп']];
-  app.innerHTML = `<div class="stack fade-in">
-    <section><p class="lb-sm up mut">${fmtLong(day.date).toUpperCase()} • ПАПКА № ${num}</p><h1 class="h-dl" style="margin-top:8px">${esc(day.title)}</h1><p class="hand" style="margin-top:8px">${esc(day.caption)}</p></section>
+  app.innerHTML = `<div class="stack fade-in two dayv">
+    <section class="F"><p class="lb-sm up mut">${fmtLong(day.date).toUpperCase()} • ПАПКА № ${num}</p><h1 class="h-dl" style="margin-top:8px">${esc(day.title)}</h1><p class="hand" style="margin-top:8px">${esc(day.caption)}</p></section>
+    <div class="col sticky">
     <div class="poster"><canvas id="pc" width="1080" height="1350" aria-label="Воспоминание дня: ${esc(day.title)}"></canvas></div>
     <div class="player"><div class="row"><div class="row" style="gap:12px;justify-content:flex-start;min-width:0"><button class="ibtn solid" id="bMusic" aria-label="Включить звук дня"><span class="ms f">play_arrow</span></button>
         <div style="min-width:0"><div class="h-sm trunc">${sUrl || m.embed ? esc(m.label) : 'Саундтрек дня'}</div><div class="lb-md mut trunc">${sUrl ? (day.hasClip && !sessionFull.has(day.id) ? 'ваш трек • фрагмент 60 с' : 'ваш трек') : m.embed ? esc(m.service) : 'по мотивам: ' + esc(m.label)} • ${day.vibe.music.bpm} bpm${day.vibe.music.minor === true ? ' • минор' : day.vibe.music.minor === false ? ' • мажор' : ''}</div></div></div>
@@ -1496,6 +1531,9 @@ async function viewDay(id){
       <div class="prog"><i id="prog"></i></div><div class="row lb-sm out" style="letter-spacing:0;margin-top:6px"><span id="pcur">кадр 1</span><span>смена каждые ${day.vibe.frameDur.toFixed(1)} с</span></div>
       <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap;justify-content:flex-start">${m.url ? `<a class="btn sec sm" href="${esc(m.url)}" target="_blank" rel="noopener">Оригинал в ${esc(m.service)} ${ms('open_in_new')}</a>` : ''}<label class="row" style="gap:6px;justify-content:flex-start"><span class="lb-md out">Голос</span><select id="voiceSel" class="field" style="height:40px;width:auto;max-width:220px;font-size:13px"></select></label></div>
       <div id="player" style="margin-top:12px"></div></div>
+    <div class="ctas"><button class="btn" id="bPng">${ms('download')}PNG</button><button class="btn sec" id="bVid">${ms('movie')}<span>Видео 15 с</span></button></div>
+    <div class="ctas"><button class="btn sec sm" id="bRe">${ms('auto_fix_high')}Пересоздать дизайн</button><button class="btn sec sm" id="bDel">${ms('delete')}<span>Удалить</span></button></div>
+    </div><div class="col">
     <section class="card"><div class="row" style="margin-bottom:4px"><div class="row" style="gap:8px">${ms('queue_music')}<span class="h-sm">Подборка, чтобы вернуться в этот день</span></div></div><p class="b-sm out" style="margin-bottom:8px">Песни с похожей атмосферой: ${esc(moodOf(day.vibe).label.toLowerCase())}</p>
       <div class="files">${pl.map(([a, t, why]) => `<div style="align-items:center"><span style="min-width:0"><span class="lb-md pri" style="display:block">${esc(t)}</span><span class="lb-md out">${esc(a)} • ${esc(why)}</span></span><span style="display:flex;gap:4px;flex:none"><a class="pill" href="https://open.spotify.com/search/${q(a + ' ' + t)}" target="_blank" rel="noopener">Spotify</a><a class="pill" href="https://www.youtube.com/results?search_query=${q(a + ' ' + t)}" target="_blank" rel="noopener">YouTube</a><a class="pill" href="https://music.yandex.ru/search?text=${q(a + ' ' + t)}" target="_blank" rel="noopener">Яндекс</a></span></div>`).join('')}</div></section>
     <section class="card"><div class="row" style="gap:8px;justify-content:flex-start;margin-bottom:4px">${ms('movie')}<span class="h-sm">Посмотреть и почитать</span></div><p class="b-sm out" style="margin-bottom:10px">Фильмы, сериалы, аниме и книги с тем же вайбом</p>
@@ -1518,10 +1556,9 @@ async function viewDay(id){
     <section class="card"><div class="h-sm" style="margin-bottom:8px">Описание дня</div><p class="quote">${esc(day.description)}</p>
       <details><summary>Исходная запись</summary><p class="b-sm" style="margin-top:8px">${esc(day.text)}</p></details></section>
     <section class="card"><div class="row" style="margin-bottom:10px"><span class="h-sm">Фото дня</span><span class="lb-md out">на картине — полароидом</span></div><div class="tiles" id="phs"></div></section>
-    <div class="ctas"><button class="btn" id="bPng">${ms('download')}PNG</button><button class="btn sec" id="bVid">${ms('movie')}<span>Видео 15 с</span></button></div>
-    <div class="ctas"><button class="btn sec sm" id="bRe">${ms('auto_fix_high')}Пересоздать дизайн</button><button class="btn sec sm" id="bDel">${ms('delete')}<span>Удалить</span></button></div>
     <div class="row">${prev ? `<a class="lb-md mut trunc" href="#/day/${prev.id}">← ${esc(prev.title)}</a>` : '<span></span>'}${next ? `<a class="lb-md mut trunc" href="#/day/${next.id}" style="text-align:right">${esc(next.title)} →</a>` : ''}</div>
     <p class="disc">Настроение дня — художественная интерпретация записи, а не психологическая оценка.</p>
+    </div>
   </div>`;
   accordion(app, ['Описание дня']);
   const side = () => {
@@ -1605,15 +1642,18 @@ async function viewCalendar(){
     cells += `<div class="${cls}" data-iso="${iso}"><span ${ds ? `style="background:${ds.at(-1).vibe.swatch.accent};color:${ds.at(-1).vibe.swatch.onAccent}" role="button" aria-label="${esc(ds.at(-1).title)}"` : ''}>${dd}</span></div>`;
   }
   const mood = selDay ? moodOf(selDay.vibe) : null;
-  app.innerHTML = `<div class="stack fade-in">
-    <section><h1 class="h-dl">Календарь</h1><p class="b-md" style="margin-top:4px">Цвет каждого дня — цвет его настроения</p></section>
+  app.innerHTML = `<div class="stack fade-in two">
+    <section class="F"><h1 class="h-dl">Календарь</h1><p class="b-md" style="margin-top:4px">Цвет каждого дня — цвет его настроения</p></section>
+    <div class="col">
     <section class="card"><div class="row" style="margin-bottom:12px"><button class="ibtn" id="mP" aria-label="Предыдущий месяц">${ms('chevron_left')}</button><span class="h-sm">${MONTHS_NOM[mo-1]} ${y}</span><button class="ibtn" id="mN" aria-label="Следующий месяц">${ms('chevron_right')}</button></div><div class="cal" id="cal">${cells}</div></section>
+    </div><div class="col">
     ${selDay ? `<section class="card c2"><span class="lb-sm up mut">${fmtLong(selDay.date)}</span><h2 class="h-lg" style="margin:6px 0 12px">${esc(selDay.title)}</h2>
       <div class="row" style="justify-content:flex-start;gap:10px;margin-bottom:8px"><span class="ms" style="color:var(--onv)">${mood.icon}</span><span class="b-md">${mood.label}</span></div>
       <div class="row" style="justify-content:flex-start;gap:10px;margin-bottom:16px"><span class="ms" style="color:var(--onv)">music_note</span><div style="min-width:0"><div class="lb-md out">Саундтрек дня</div><div class="b-md trunc" style="color:var(--on)">${esc(selDay.music.label)}</div></div></div>
       <a class="btn w" href="#/day/${selDay.id}">Открыть воспоминание ${ms('arrow_forward')}</a></section>`
     : `<section class="card c2" style="text-align:center"><p class="b-md" style="margin-bottom:12px">${calSel ? 'В этот день записи нет' : 'В этом месяце пока нет записей'}</p><a class="btn sec sm" href="#/new">Записать день</a></section>`}
     ${inMonth.length > 1 ? `<section><div class="h-sm" style="margin-bottom:8px">Другие дни в ${MONTHS_PREP[mo-1]}</div><div class="list">${inMonth.filter(d => d !== selDay).reverse().map(d => `<a class="item" href="#/day/${d.id}"><div style="width:52px;text-align:center;flex:none"><div class="h-sm">${+d.date.slice(8)}</div><div class="lb-md out">${MONTHS[mo-1].slice(0,3)}</div></div><div class="t"><span class="h-sm trunc" style="font-size:15px">${esc(d.title)}</span><span class="b-sm">${moodOf(d.vibe).label}</span></div>${ms('chevron_right')}</a>`).join('')}</div></section>` : ''}
+    </div>
   </div>`;
   const shift = k => { const d = new Date(y, mo - 1 + k, 1); calMonth = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; viewCalendar(); };
   $('#mP').onclick = () => shift(-1); $('#mN').onclick = () => shift(1);
@@ -1639,18 +1679,21 @@ function viewCapsule(){
   const t = todayISO(), plus = n => { const d = new Date(); d.setMonth(d.getMonth() + n); return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10); };
   const daysTo = iso => Math.round((Date.parse(iso) - Date.parse(t)) / 864e5);
   const caps = [...CAPS].sort((a,b) => a.open < b.open ? -1 : 1);
-  app.innerHTML = `<div class="stack fade-in">
-    <section><div class="row" style="justify-content:flex-start;gap:8px"><h1 class="h-dl">Капсула времени</h1><span class="ms" style="font-size:26px;color:var(--onv)">hourglass_top</span></div><p class="b-md" style="margin-top:4px">Послание себе в будущее. Откроется только в назначенную дату.</p></section>
+  app.innerHTML = `<div class="stack fade-in two">
+    <section class="F"><div class="row" style="justify-content:flex-start;gap:8px"><h1 class="h-dl">Капсула времени</h1><span class="ms" style="font-size:26px;color:var(--onv)">hourglass_top</span></div><p class="b-md" style="margin-top:4px">Послание себе в будущее. Откроется только в назначенную дату.</p></section>
+    <div class="col">
     <section class="card"><div class="row" style="margin-bottom:12px"><span class="h-sm">Создать капсулу</span><span class="pill">Черновик</span></div>
       <div class="ta" style="background:var(--cont)"><textarea id="ct" placeholder="Что ты хочешь сказать себе через полгода?" style="min-height:110px" aria-label="Текст послания"></textarea></div><p class="err" id="e-ct"></p>
       <input class="field" id="cm" placeholder="Саундтрек момента: исполнитель — название" style="margin-top:10px" aria-label="Песня">
       <label class="row card c2" style="margin-top:10px;padding:12px 14px;position:relative"><span class="row" style="gap:10px;justify-content:flex-start">${ms('calendar_today')}<span class="b-md" style="color:var(--on)">Дата открытия</span></span><span class="lb-md mut" id="cdl">${fmtLong(plus(6))}</span><input type="date" id="cd" value="${plus(6)}" min="${plus(0)}" style="position:absolute;inset:0;opacity:0;width:100%;cursor:pointer" aria-label="Дата открытия"></label><p class="err" id="e-cd"></p>
       <button class="btn w" id="seal" style="margin-top:14px">${ms('lock')}Запечатать капсулу</button></section>
+    </div><div class="col">
     <section><div class="row" style="margin-bottom:8px"><span class="h-sm">Запечатанные капсулы</span><span class="lb-md out">${caps.length}</span></div>
       <div class="list">${caps.map(c => { const n = daysTo(c.open), ready = n <= 0; return `<div class="lock"><div class="ic">${ms(ready ? 'lock_open' : 'lock')}</div><div style="flex:1;min-width:0">
         <div class="h-sm">${esc(makeTitle(analyzeText(c.text)))}</div><div class="lb-md out" style="margin-top:2px">Создано: ${fmtLong(c.created)}</div>
         <div class="b-sm" style="margin-top:6px;color:${ready ? 'var(--primary)' : 'var(--onv)'}">${ready ? 'Откроется сегодня' : `Откроется ${fmtLong(c.open)} (через ${n} дн.)`}</div>
         ${ready ? `<button class="btn sm" data-open="${c.id}" style="margin-top:10px">${ms('auto_awesome')}Открыть капсулу</button><div class="revealed" id="rv-${c.id}" hidden><p class="quote">«${esc(c.text)}»</p>${c.music ? `<div class="lb-md mut" style="margin-top:8px;display:flex;gap:6px;align-items:center">${ms('music_note')}${esc(c.music)}</div>` : ''}</div>` : ''}</div></div>`; }).join('')}</div></section>
+    </div>
   </div>`;
   $('#cd').onchange = e => { $('#cdl').textContent = e.target.value ? fmtLong(e.target.value) : ''; };
   $$('[data-open]').forEach(b => b.onclick = () => { $('#rv-' + b.dataset.open).hidden = false; b.remove(); });
