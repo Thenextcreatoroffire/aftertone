@@ -2380,7 +2380,7 @@ async function signOut(){
   prepCache.clear(); thumbCache.clear(); photoThumbCache.clear(); setSync('off');
   if (!DAYS.length) await seedDemo();
 }
-const AUTH_ERR = m => /Invalid login credentials/i.test(m) ? 'Неверная почта или пароль' : /already registered|already been registered/i.test(m) ? 'Такой аккаунт уже есть — нажмите «Войти»' : /Password should be at least/i.test(m) ? 'Пароль — минимум 6 символов' : /Email not confirmed/i.test(m) ? 'Почта не подтверждена — откройте письмо от Supabase' : /valid email|invalid format/i.test(m) ? 'Проверьте адрес почты' : /rate limit/i.test(m) ? 'Слишком много попыток, подождите минуту' : m;
+const AUTH_ERR = m => /Database error saving new user|duplicate key|already registered|already been registered/i.test(m) ? 'Такой аккаунт уже есть. Если не приходило письмо — проверьте «Спам», затем нажмите «Уже есть аккаунт? Войти»' : /Invalid login credentials/i.test(m) ? 'Неверная почта или пароль' : /already registered|already been registered/i.test(m) ? 'Такой аккаунт уже есть — нажмите «Войти»' : /Password should be at least/i.test(m) ? 'Пароль — минимум 6 символов' : /Email not confirmed/i.test(m) ? 'Почта не подтверждена — откройте письмо от Supabase (оно могло попасть в «Спам»)' : /valid email|invalid format/i.test(m) ? 'Проверьте адрес почты' : /rate limit/i.test(m) ? 'Слишком много попыток, подождите минуту' : m;
 let loginMode = 'in';
 function viewLogin(){
   setTab(''); topBack('#/', USER ? 'Аккаунт' : 'Вход');
@@ -2415,16 +2415,20 @@ function viewLogin(){
     return;
   }
   $('#sw').onclick = () => { loginMode = up ? 'in' : 'up'; viewLogin(); };
+  let running = false;
   const run = async () => {
+    if (running) return;
     const email = $('#em').value.trim(), password = $('#pw').value, name = up ? $('#nm').value.trim().slice(0, 24) : '';
     $('#lerr').textContent = ''; $('#lmsg').textContent = '';
     if (up && !name){ $('#lerr').textContent = 'Введите имя или никнейм'; return; }
     if (!email || !password){ $('#lerr').textContent = 'Введите почту и пароль'; return; }
     if (!SB){ $('#lerr').textContent = 'Нет связи с облаком. Проверьте интернет и обновите страницу.'; return; }
     $('#lmsg').textContent = up ? 'Создаю аккаунт…' : 'Вхожу…';
-    const res = up ? await SB.auth.signUp({ email, password, options: { data: { name }, emailRedirectTo: location.origin + location.pathname } }) : await SB.auth.signInWithPassword({ email, password });
+    running = true; $('#go1').disabled = $('#sw').disabled = true;
+    const res = await (up ? SB.auth.signUp({ email, password, options: { data: { name }, emailRedirectTo: location.origin + location.pathname } }) : SB.auth.signInWithPassword({ email, password })).catch(e => ({ error: e }));
+    running = false; if ($('#go1')){ $('#go1').disabled = $('#sw').disabled = false; }
     if (res.error){ $('#lmsg').textContent = ''; $('#lerr').textContent = AUTH_ERR(res.error.message); return; }
-    if (up && !res.data.session){ $('#lmsg').textContent = 'Готово! Мы отправили письмо на ' + email + ' — подтвердите почту и войдите.'; loginMode = 'in'; return; }
+    if (up && !res.data.session){ $('#lmsg').textContent = 'Готово! Мы отправили письмо на ' + email + ' — откройте ссылку из него (проверьте и «Спам»), затем войдите.'; loginMode = 'in'; return; }
     $('#lmsg').textContent = 'Загружаю ваши дни…';
   };
   $('#go1').onclick = run;
