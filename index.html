@@ -25,6 +25,8 @@
 --head:'Montserrat',system-ui,sans-serif;--body:-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter',system-ui,sans-serif}
 html{background:var(--bg);transition:--bg 1.6s ease,--low 1.6s ease,--cont 1.6s ease,--high 1.6s ease,--highest 1.6s ease,--on 1.6s ease,--onv 1.6s ease,--outline 1.6s ease,--outv 1.6s ease,--primary 1.6s ease,--on-primary 1.6s ease,--aura 1.6s ease}
 *{box-sizing:border-box}
+html,body{overflow-x:hidden}
+.app,main,.stack,.col{min-width:0}
 body{margin:0;background:var(--bg);color:var(--on);font:400 15px/20px var(--body);-webkit-font-smoothing:antialiased;overscroll-behavior-y:none;-webkit-tap-highlight-color:transparent}
 body::before{content:'';position:fixed;left:50%;top:-220px;width:900px;height:640px;transform:translateX(-50%);background:radial-gradient(closest-side,color-mix(in oklab,var(--aura) 45%,transparent),transparent);pointer-events:none;z-index:0;transition:background 1.6s}
 a{color:inherit;text-decoration:none}
@@ -215,11 +217,12 @@ details.acc{background:var(--low);border-radius:16px}
   .tabs a.plus .pl{display:inline}
   .stack.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px 40px;align-items:start}
   .stack.two.wideL{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
-  .stack.two.dayv{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)}
+  .stack.two.dayv{grid-template-columns:min(560px, calc((100vh - 230px) * 0.8)) minmax(0,1fr)}
   .stack.two>.F{grid-column:1/-1}
   .stack.two>.col{display:flex;flex-direction:column;gap:20px;min-width:0}
   .stack.two>.col.sticky{position:sticky;top:76px}
-  .dayv .poster canvas{max-height:calc(100vh - 330px);width:auto;max-width:100%;margin:0 auto}
+  .dayv .poster{background:transparent}
+  .dayv .poster canvas{width:100%;height:auto}
   .list.d2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
   .grid2{grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
   .h-dl{font-size:34px;line-height:41px}
@@ -356,7 +359,7 @@ function analyzeText(raw){
   else if (has(['утр','рассвет','проснул'])) tod = 'morning';
   let season = null;
   if (has(['осен','листь','листоп','октябр'])) season = 'autumn';
-  else if (has(['зим','снег','мороз','декабр','январ','феврал','сугроб'])) season = 'winter';
+  else if (has(['зим','снег','мороз','декабр','январ','феврал','сугроб','новый год','новогод','елк','курант'])) season = 'winter';
   else if (has(['весн','цвел','март','апрел'])) season = 'spring';
   else if (has(['летн','летом','жар','пляж','июн','июл','август'])) season = 'summer';
   return { scales, hits, tod, season, nostalgia: n('nostalgia') > 0, raw: t, words };
@@ -366,6 +369,7 @@ function analyzeText(raw){
 const RX = (frag) => new RegExp('(?:^|[^а-я])(?:' + frag + ')', 'i');
 const has = (t, frag) => RX(frag).test(t);
 function sceneKind(t){
+  if (NEWYEAR.test(t)) return has(t, 'город|улиц|площад|салют|фейерверк') ? 'city' : 'room';
   if (has(t, 'день рожд|вечерин|концерт|праздн|клуб|дискотек|свадьб|выпускн|тусовк|туса')) return 'party';
   if (has(t, 'офис|дедлайн|сдач|билд|ноутбук|компьютер|работ')) return 'office';
   if (has(t, 'мор(?:е|я|ю|ем|ск)|пляж|озер|океан|рек(?:а|и|е|у|ой)(?![а-я])')) return 'sea';
@@ -375,8 +379,9 @@ function sceneKind(t){
   if (has(t, 'дом(?:а|ой|у)?(?![а-я])|кухн|окн|комнат|балкон|кроват|диван|кафе|кофейн')) return 'room';
   return 'field';
 }
+const NEWYEAR = /(?:^|[^а-я])(?:новый год|новым годом|нового года|новогод|ёлк|елк|курант|31 декабря|дед мороз|снегурочк)/i;
 const weatherOf = t => has(t, 'дожд|ливн|ливен|лило') ? 'rain' : has(t, 'снег|снеж|метел') ? 'snow' : has(t, 'туман') ? 'fog' : null;
-const EVENTS = [['день рожд','День рождения'],['свадьб','Свадьба'],['выпускн','Выпускной'],['концерт','Концерт'],['новый год','Новый год'],['собеседован','Собеседование'],['свидан','Свидание'],['переезд','Переезд'],['поход','Поход'],['путешеств','Путешествие'],['поездк','Поездка']];
+const EVENTS = [['день рожд','День рождения'],['свадьб','Свадьба'],['выпускн','Выпускной'],['концерт','Концерт'],['новый год','Новый год'],['новогод','Новогодний вечер'],['елк','Новогодняя ёлка'],['собеседован','Собеседование'],['свидан','Свидание'],['переезд','Переезд'],['поход','Поход'],['путешеств','Путешествие'],['поездк','Поездка']];
 const BEFORE = [['сдач','перед сдачей'],['дедлайн','перед дедлайном'],['экзамен','перед экзаменом'],['защит','перед защитой']];
 const PLACES2 = [
   ['мор(?:е|я|ю|ем|ск)','море','n','у моря'],['пляж','пляж','m','на пляже'],['озер','озеро','n','у озера'],['рек(?:а|и|е|у|ой)(?![а-я])','река','f','у реки'],['пруд','пруд','m','у пруда'],
@@ -596,6 +601,7 @@ function finalize(v){
 // оттенок, который задаёт сама тема дня; фото и слова только смещают его
 function semanticHue(v){
   const T = v.textInfo || {}, s = v.scales;
+  if (T.newYear) return 226;
   if (T.scene === 'party') return 335;
   if (T.weather === 'rain') return 240;
   if (T.weather === 'snow' || T.season === 'winter') return 228;
@@ -663,7 +669,7 @@ async function buildVibe(text, photoSources, music){
   const ai = await analyzeWithAI({text, photoColors:P.colors, music:{label:music.label, bpm:music.bpm, minor:music.minor, genre:music.genre}});
   if (ai){ if (ai.scales) Object.assign(T.scales, ai.scales); if (typeof ai.nostalgia === 'boolean') T.nostalgia = ai.nostalgia; if (ai.hits) Object.assign(T.hits, ai.hits); }
   const v = { scales: combine(T, P, music), photo: P, music: {bpm:music.bpm, energy:music.energy, minor:music.minor, genre:music.genre, source:music.source},
-    textInfo: { hits:{warm:T.hits.warm, cold:T.hits.cold, tension:T.hits.tension}, tod:T.tod, season:T.season, nostalgia:T.nostalgia, scene: sceneKind(T.raw), weather: weatherOf(T.raw), romance: ROMANCE.test(T.raw) } };
+    textInfo: { hits:{warm:T.hits.warm, cold:T.hits.cold, tension:T.hits.tension}, tod:T.tod, season:T.season, nostalgia:T.nostalgia, scene: sceneKind(T.raw), weather: weatherOf(T.raw), romance: ROMANCE.test(T.raw), newYear: NEWYEAR.test(T.raw) } };
   finalize(v);
   let title = makeTitle(T, v.scales), { description, caption } = makeStory(T, v, hashStr(text));
   if (ai){ if (ai.title && ai.title.split(' ').length >= 3 && ai.title.split(' ').length <= 7) title = ai.title; if (ai.description) description = ai.description; if (ai.caption) caption = ai.caption.slice(0, 60); }
@@ -755,7 +761,7 @@ async function seedDemo(){
     const photos = [0,1,2].map(k => scene(d.scene, k + 1));
     const music = musicFromLink(d.music.url, d.music.label, d.music.tempo, d.music.mode);
     const { vibe, title, caption, description } = await buildVibe(d.text, photos, music);
-    DAYS.push({ id:d.id, demo:true, scene:d.scene, date:d.date, createdAt:i, text:d.text, photos:[], music, vibe, title, caption, description, v2:1, v3:1, v4:1, rev:0 });
+    DAYS.push({ id:d.id, demo:true, scene:d.scene, date:d.date, createdAt:i, text:d.text, photos:[], music, vibe, title, caption, description, v2:1, v3:1, v4:1, v5:1, rev:0 });
   }
   save();
 }
@@ -1246,7 +1252,8 @@ function fxKinds(day){
   const T = day.vibe.textInfo, t = day.text.toLowerCase().replace(/ё/g, 'е'), s = day.vibe.scales;
   const love = ROMANCE.test(t);
   let main;
-  if (T.scene === 'party') main = 'confetti';
+  if (T.newYear) main = 'snow';
+  else if (T.scene === 'party') main = 'confetti';
   else if (T.weather === 'rain') main = 'rain';
   else if (T.weather === 'snow' || T.season === 'winter') main = 'snow';
   else if (love && !T.season) main = 'hearts';
@@ -1258,7 +1265,7 @@ function fxKinds(day){
   else if (T.tod === 'night') main = 'stars';
   else if (T.tod === 'evening') main = 'fireflies';
   else main = 'dust';
-  const second = love && main !== 'hearts' ? 'hearts' : (main === 'confetti' && (T.weather === 'snow' || T.season === 'winter')) ? 'snow' : (main === 'confetti' && T.weather === 'rain') ? 'rain' : null;
+  const second = T.newYear ? 'sparkles' : love && main !== 'hearts' ? 'hearts' : (main === 'confetti' && (T.weather === 'snow' || T.season === 'winter')) ? 'snow' : (main === 'confetti' && T.weather === 'rain') ? 'rain' : null;
   return second ? [main, second] : [main];
 }
 function fxInit(){
@@ -1625,7 +1632,7 @@ async function createDay(input){
     const { vibe, title, caption, description } = await buildVibe(input.text, imgs, music);
     b.say('Рисую картину дня');
     const id = 'd' + Date.now().toString(36);
-    const day = { id, date: input.date, createdAt: Date.now(), text: input.text, photos, music, vibe, title, caption, description, v2: 1, v3: 1, v4: 1, rev: 0 };
+    const day = { id, date: input.date, createdAt: Date.now(), text: input.text, photos, music, vibe, title, caption, description, v2: 1, v3: 1, v4: 1, v5: 1, rev: 0 };
     if (input.audio){ b.say('Сохраняю фрагмент песни'); try { await ADB.put(id, await makeClip(input.audio)); day.hasClip = true; } catch (e) { console.warn(e); } }
     if (IMAGE_ENDPOINT) b.say('Нейросеть рисует день');
     const aiImg = await generateAIImage(day); if (aiImg) day.art = [aiImg];
@@ -1873,6 +1880,7 @@ async function route(hash){
   const stored = load();
   if (stored && stored.length) DAYS = stored; else await seedDemo();
   let migrated = false;
+  for (const d of DAYS) if (!d.v5){ const A = analyzeText(d.text); Object.assign(d.vibe.textInfo, { scene: sceneKind(A.raw), weather: weatherOf(A.raw), romance: ROMANCE.test(A.raw), newYear: NEWYEAR.test(A.raw), season: A.season }); finalize(d.vibe); d.title = makeTitle(A, d.vibe.scales); const st = makeStory(A, d.vibe, hashStr(d.text)); d.description = st.description; d.caption = st.caption; d.v2 = d.v3 = d.v4 = d.v5 = 1; d.rev++; migrated = true; }
   for (const d of DAYS) if (!d.v4){ const A = analyzeText(d.text); Object.assign(d.vibe.textInfo, { scene: sceneKind(A.raw), weather: weatherOf(A.raw), romance: ROMANCE.test(A.raw) }); finalize(d.vibe); d.title = makeTitle(A, d.vibe.scales); const st = makeStory(A, d.vibe, hashStr(d.text)); d.description = st.description; d.caption = st.caption; d.v2 = d.v3 = d.v4 = 1; d.rev++; migrated = true; }
   for (const d of DAYS) if (!d.v3){ const A = analyzeText(d.text); d.title = makeTitle(A, d.vibe.scales); const st = makeStory(A, d.vibe, hashStr(d.text)); d.description = st.description; d.caption = st.caption; d.v2 = d.v3 = 1; d.rev++; migrated = true; }
   for (const d of DAYS) if (!d.v2){ const A = analyzeText(d.text); Object.assign(d.vibe.textInfo, { scene: sceneKind(A.raw), weather: weatherOf(A.raw), tod: A.tod, season: A.season }); d.title = makeTitle(A, d.vibe.scales); const st = makeStory(A, d.vibe, hashStr(d.text)); d.description = st.description; d.caption = st.caption; d.v2 = 1; d.rev++; migrated = true; }
