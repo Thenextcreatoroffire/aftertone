@@ -1490,7 +1490,6 @@ async function viewDay(id){
   app.innerHTML = `<div class="stack fade-in">
     <section><p class="lb-sm up mut">${fmtLong(day.date).toUpperCase()} • ПАПКА № ${num}</p><h1 class="h-dl" style="margin-top:8px">${esc(day.title)}</h1><p class="hand" style="margin-top:8px">${esc(day.caption)}</p></section>
     <div class="poster"><canvas id="pc" width="1080" height="1350" aria-label="Воспоминание дня: ${esc(day.title)}"></canvas></div>
-    <button class="btn w" id="bEnter">${ms('play_circle', 1)}Войти в день</button>
     <div class="player"><div class="row"><div class="row" style="gap:12px;justify-content:flex-start;min-width:0"><button class="ibtn solid" id="bMusic" aria-label="Включить звук дня"><span class="ms f">play_arrow</span></button>
         <div style="min-width:0"><div class="h-sm trunc">${sUrl || m.embed ? esc(m.label) : 'Саундтрек дня'}</div><div class="lb-md mut trunc">${sUrl ? (day.hasClip && !sessionFull.has(day.id) ? 'ваш трек • фрагмент 60 с' : 'ваш трек') : m.embed ? esc(m.service) : 'по мотивам: ' + esc(m.label)} • ${day.vibe.music.bpm} bpm${day.vibe.music.minor === true ? ' • минор' : day.vibe.music.minor === false ? ' • мажор' : ''}</div></div></div>
         <div style="display:flex"><button class="ibtn" id="bSynth" aria-label="Сгенерированный звук дня" title="Звук дня">${ms('graphic_eq')}</button><button class="ibtn" id="bVoice" aria-label="Озвучка описания">${ms('record_voice_over')}</button></div></div>
@@ -1552,7 +1551,6 @@ async function viewDay(id){
     else if (m.embed){ if (!$('iframe', player)) player.innerHTML = `<iframe src="${m.embed}" style="width:100%;border:0;border-radius:12px" height="${m.embed.includes('spotify') ? 152 : 220}" allow="autoplay; encrypted-media; clipboard-write" loading="lazy" title="Песня дня"></iframe><p class="b-sm out" style="font-size:12px;margin-top:6px">Если плеер не загрузился, откройте оригинал по кнопке выше.</p>`; }
     else { if (SOUND && SOUND.day === day.id){ stopSoundtrack(); $('#bMusic').innerHTML = ms('play_arrow', 1); } else { startSoundtrack(day); $('#bMusic').innerHTML = ms('pause', 1); } }
   };
-  $('#bEnter').onclick = () => enterDay(day, P, 'cinema');
   $('#bVoice').onclick = () => speak(day, on => { $('#bVoice').innerHTML = ms(on ? 'stop_circle' : 'record_voice_over'); });
   const fillVoices = () => { const vs = ruVoices(), cur = pickVoice(); const sel = $('#voiceSel'); if (!sel) return; sel.innerHTML = vs.length ? vs.map(v => `<option ${cur && v.name === cur.name ? 'selected' : ''}>${esc(v.name)}</option>`).join('') : '<option>голос браузера</option>'; };
   fillVoices(); if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = fillVoices;
