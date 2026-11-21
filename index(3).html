@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aftertone — дневник атмосферы дня</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&family=Caveat:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+@property --bg{syntax:'<color>';inherits:true;initial-value:#131313}
+@property --low{syntax:'<color>';inherits:true;initial-value:#1b1b1b}
+@property --cont{syntax:'<color>';inherits:true;initial-value:#1f1f1f}
+@property --high{syntax:'<color>';inherits:true;initial-value:#2a2a2a}
+@property --highest{syntax:'<color>';inherits:true;initial-value:#353535}
+@property --on{syntax:'<color>';inherits:true;initial-value:#e2e2e2}
+@property --onv{syntax:'<color>';inherits:true;initial-value:#c4c7c8}
+@property --outline{syntax:'<color>';inherits:true;initial-value:#8e9192}
+@property --outv{syntax:'<color>';inherits:true;initial-value:#444748}
+@property --primary{syntax:'<color>';inherits:true;initial-value:#ffffff}
+@property --on-primary{syntax:'<color>';inherits:true;initial-value:#2f3131}
+@property --aura{syntax:'<color>';inherits:true;initial-value:#c6c6c7}
+:root{--bg:#131313;--lowest:#0e0e0e;--low:#1b1b1b;--cont:#1f1f1f;--high:#2a2a2a;--highest:#353535;--on:#e2e2e2;--onv:#c4c7c8;--outline:#8e9192;--outv:#444748;--primary:#fff;--on-primary:#2f3131;--aura:#c6c6c7;--err:#ffb4ab;
+--head:'Montserrat',system-ui,sans-serif;--body:-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter',system-ui,sans-serif}
+html{background:var(--bg);transition:--bg 1.6s ease,--low 1.6s ease,--cont 1.6s ease,--high 1.6s ease,--highest 1.6s ease,--on 1.6s ease,--onv 1.6s ease,--outline 1.6s ease,--outv 1.6s ease,--primary 1.6s ease,--on-primary 1.6s ease,--aura 1.6s ease}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--on);font:400 15px/20px var(--body);-webkit-font-smoothing:antialiased;overscroll-behavior-y:none;-webkit-tap-highlight-color:transparent}
+body::before{content:'';position:fixed;left:50%;top:-220px;width:900px;height:640px;transform:translateX(-50%);background:radial-gradient(closest-side,color-mix(in oklab,var(--aura) 45%,transparent),transparent);pointer-events:none;z-index:0;transition:background 1.6s}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.ms{font-family:'Material Symbols Outlined';font-weight:normal;font-style:normal;font-size:20px;line-height:1;display:inline-block;width:1em;height:1em;overflow:hidden;white-space:nowrap;direction:ltr;-webkit-font-feature-settings:'liga';font-feature-settings:'liga';font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;flex:none;vertical-align:middle}
+.ms.f{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24}
+.app{position:relative;z-index:1;max-width:560px;margin:0 auto;min-height:100vh;padding:0 20px 120px}
+.top{position:sticky;top:0;z-index:30;height:56px;display:flex;align-items:center;justify-content:space-between;background:color-mix(in oklab,var(--bg) 88%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);margin:0 -20px;padding:0 20px}
+.brand{font:700 15px var(--head);letter-spacing:.32em;color:var(--primary)}
+.top .l{display:flex;align-items:center;gap:6px;font:600 17px/22px var(--head);color:var(--primary)}
+.ibtn{width:44px;height:44px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:var(--on)}
+.ibtn.solid{background:var(--primary);color:var(--on-primary);width:36px;height:36px}
+.ibtn:active{opacity:.8}
+.sheet{position:absolute;right:20px;top:52px;background:var(--high);border:1px solid var(--outv);border-radius:16px;padding:16px;width:280px;z-index:40;font-size:13px;line-height:18px;color:var(--onv)}
+.sheet .btn{margin-top:12px;width:100%}
+.stack{display:flex;flex-direction:column;gap:24px;padding-top:8px}
+.h-dl{font:700 28px/34px var(--head);letter-spacing:-.01em;color:var(--primary);margin:0}
+.h-lg{font:600 24px/30px var(--head);letter-spacing:-.01em;color:var(--primary);margin:0}
+.h-md{font:600 20px/25px var(--head);color:var(--primary);margin:0}
+.h-sm{font:600 17px/22px var(--head);letter-spacing:-.005em;color:var(--primary);margin:0}
+.b-md{font:400 15px/20px var(--body);color:var(--onv);margin:0}
+.b-sm{font:400 13px/18px var(--body);color:var(--onv);margin:0}
+.lb-md{font:500 12px/16px var(--body)}
+.lb-sm{font:600 10px/12px var(--body);letter-spacing:.06em}
+.up{text-transform:uppercase;letter-spacing:.12em}
+.mut{color:var(--onv)}.out{color:var(--outline)}.pri{color:var(--primary)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--high);color:var(--on);font:600 10px/12px var(--body);letter-spacing:.04em}
+.dot{width:6px;height:6px;border-radius:999px;background:var(--aura);display:inline-block;animation:pulse 2s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.card{background:var(--low);border-radius:16px;padding:16px}
+.card.c2{background:var(--cont)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:50px;padding:0 24px;border-radius:999px;background:var(--primary);color:#000;font:600 15px var(--head);transition:opacity .2s,transform .1s}
+.btn:active{transform:scale(.98)}
+.btn.sec{background:transparent;color:var(--primary);border:1px solid var(--outv)}
+.btn.sec:hover{background:var(--cont)}
+.btn.sm{height:40px;padding:0 16px;font-size:13px}
+.btn.w{width:100%}
+.chip{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px;border-radius:999px;background:var(--cont);color:var(--onv);font:500 13px var(--body);white-space:nowrap}
+.chip.on{background:var(--primary);color:#000}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips.scroll{flex-wrap:nowrap;overflow-x:auto;margin:0 -20px;padding:0 20px;scrollbar-width:none}
+.chips.scroll::-webkit-scrollbar{display:none}
+.field{width:100%;height:48px;border-radius:10px;background:var(--cont);border:1px solid transparent;color:var(--on);font:400 15px var(--body);padding:0 14px;outline:none}
+.field:focus{border-color:var(--primary)}
+.field::placeholder,textarea::placeholder{color:var(--outline)}
+.search{position:relative}.search .ms{position:absolute;left:12px;top:14px;color:var(--outline)}.search .field{padding-left:42px}
+.err{color:var(--err);font:500 12px/16px var(--body);margin:6px 0 0}.err:empty{display:none}
+.fade-in{animation:fi .45s ease both}@keyframes fi{from{opacity:0;transform:translateY(6px)}}
+/* главная */
+.capture{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.capture .ibtn{width:48px;height:48px;background:var(--primary);color:#000}
+.feat{background:var(--cont);border-radius:16px;overflow:hidden}
+.feat .media{position:relative;aspect-ratio:4/3;background:var(--high)}
+.feat canvas{width:100%;height:100%;display:block}
+.feat .media::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,var(--cont),color-mix(in oklab,var(--cont) 20%,transparent) 40%,transparent)}
+.ovl{position:absolute;z-index:2;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:color-mix(in oklab,var(--lowest) 80%,transparent);backdrop-filter:blur(12px);color:var(--primary);font:600 10px/12px var(--body);letter-spacing:.02em;max-width:calc(100% - 24px)}
+.ovl span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ovl .ms{font-size:14px}
+.feat .body{padding:16px;display:flex;flex-direction:column;gap:8px}
+.mini{display:flex;align-items:center;justify-content:space-between;background:var(--low);padding:10px;border-radius:8px;margin-top:4px}
+.mini .ibtn{width:36px;height:36px;background:var(--primary);color:#000}
+.wave{display:flex;align-items:center;gap:2px;height:24px}.wave i{width:2px;border-radius:2px;background:var(--aura);display:block}
+.moods{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mood{background:var(--low);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.bar{height:4px;background:var(--highest);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--aura);border-radius:4px}
+.list{display:flex;flex-direction:column;gap:10px}
+.item{display:flex;align-items:center;gap:16px;padding:12px;border-radius:16px;background:var(--cont);transition:background .2s}
+.item:hover{background:var(--high)}
+.item img{width:56px;height:56px;border-radius:8px;object-fit:cover;background:var(--highest);flex:none}
+.item .t{min-width:0;flex:1;display:flex;flex-direction:column;gap:2px}
+.trunc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* дневник */
+.dcard{background:var(--cont);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.dcard .cov{border-radius:10px;overflow:hidden;aspect-ratio:16/9;margin-bottom:4px}
+.dcard .cov img{width:100%;height:100%;object-fit:cover;display:block}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.grid2 a img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:12px;display:block;background:var(--high)}
+.seg{display:inline-flex;background:var(--cont);border-radius:999px;padding:3px}.seg button{width:38px;height:30px;border-radius:999px;color:var(--outline);display:inline-flex;align-items:center;justify-content:center}.seg button.on{background:var(--highest);color:var(--primary)}
+/* создание */
+.steps{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -20px;padding:4px 20px}
+.steps::-webkit-scrollbar{display:none}
+.step{display:inline-flex;align-items:center;gap:6px;font:600 13px var(--body);color:var(--outline);white-space:nowrap}
+.step b{width:24px;height:24px;border-radius:999px;background:var(--high);color:var(--onv);display:inline-flex;align-items:center;justify-content:center;font:600 12px var(--body)}
+.step.on{color:var(--primary)}.step.on b{background:var(--primary);color:#000}
+.step.done b{background:var(--aura);color:#000}
+.steps hr{width:14px;border:0;border-top:1px solid var(--outv);margin:0;flex:none}
+.datepill{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 14px;border-radius:999px;background:var(--cont);font:600 13px var(--body);color:var(--on);position:relative}
+.datepill input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.ta{background:var(--cont);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;border:1px solid transparent}
+.ta:focus-within{border-color:var(--outv)}
+.ta textarea{background:transparent;border:0;outline:none;resize:none;color:var(--on);font:400 17px/24px var(--body);min-height:150px;width:100%}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.tile{position:relative;aspect-ratio:1/1.12;border-radius:16px;overflow:hidden;background:var(--cont);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;font:600 13px var(--body);color:var(--on);cursor:pointer}
+.tile.ghost{background:var(--lowest);color:var(--outline);font-weight:400}
+.tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.tile .main{position:absolute;left:8px;bottom:8px;background:color-mix(in oklab,#000 55%,transparent);color:#fff;font:600 10px var(--body);padding:3px 7px;border-radius:6px}
+.tile .x{position:absolute;right:8px;top:8px;width:26px;height:26px;border-radius:999px;background:color-mix(in oklab,#000 60%,transparent);color:#fff;display:flex;align-items:center;justify-content:center}
+.tile .x .ms{font-size:16px}
+.music{background:var(--cont);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.music .hd{display:flex;align-items:center;gap:14px}
+.music .ic{width:48px;height:48px;border-radius:10px;background:var(--high);display:flex;align-items:center;justify-content:center;flex:none;color:var(--primary)}
+.music .field,.music .chip:not(.on){background:var(--high)}
+.k{font:600 10px var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--outline);min-width:44px}
+.note{font:400 12px/16px var(--body);color:var(--outline);text-align:center;margin:10px 0 0}
+/* воспоминание */
+.poster{border-radius:16px;overflow:hidden;position:relative;background:var(--low)}
+.poster canvas{width:100%;height:auto;display:block}
+.player{background:var(--cont);border-radius:16px;padding:16px}
+.player .ibtn.solid{width:44px;height:44px}
+.prog{height:8px;background:var(--highest);border-radius:8px;overflow:hidden;margin-top:12px}.prog i{display:block;height:100%;background:var(--primary);border-radius:8px;width:0}
+.bento{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cell{background:var(--cont);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.cell.w{grid-column:1/-1}
+.cell .lb{display:flex;align-items:center;gap:8px;color:var(--onv);font:400 13px var(--body)}
+.pal{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.pal div{background:var(--cont);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:6px;align-items:center}
+.pal i{display:block;width:100%;aspect-ratio:1;border-radius:4px}
+.pal span{font:500 9.5px var(--body);color:var(--outline);text-transform:uppercase}
+.sl{display:grid;grid-template-columns:96px 1fr 30px;gap:12px;align-items:center;font:500 12px var(--body);color:var(--onv);margin:6px 0}
+.sl b{font-weight:600;color:var(--primary);text-align:right}
+input[type=range]{width:100%;accent-color:var(--primary)}
+.rules{list-style:none;margin:0;padding:0}
+.rules li{padding:10px 0 10px 26px;position:relative;border-top:1px solid var(--outv);font:400 13px/18px var(--body);color:var(--on)}
+.rules li:first-child{border-top:0}
+.rules li .ms{position:absolute;left:0;top:10px;font-size:16px;color:var(--aura)}
+.files div{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--outv);font:400 13px var(--body)}
+.files div:first-child{border-top:0}
+.files span:last-child{color:var(--outline);text-align:right}
+.quote{font:400 17px/24px var(--body);color:var(--onv);margin:0}
+.hand{font-family:'Caveat',cursive;font-size:24px;line-height:28px;color:var(--onv);margin:0}
+.ctas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.extra{display:flex;flex-wrap:wrap;gap:8px}
+details summary{cursor:pointer;list-style:none;font:600 12px var(--body);color:var(--outline);margin-top:12px}
+details summary::-webkit-details-marker{display:none}
+/* календарь */
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px 0;text-align:center}
+.cal .wd{font:600 10px var(--body);color:var(--outline);letter-spacing:.06em;padding-bottom:8px}
+.cal .d{height:44px;display:flex;align-items:center;justify-content:center}
+.cal .d span{width:38px;height:38px;border-radius:999px;display:flex;align-items:center;justify-content:center;font:500 15px var(--body);color:var(--onv)}
+.cal .d.has span{color:#111;font-weight:600;cursor:pointer}
+.cal .d.sel span{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--primary)}
+.cal .d.today span{border:1px solid var(--outline)}
+/* капсула */
+.lock{display:flex;gap:14px;align-items:flex-start;background:var(--cont);border-radius:16px;padding:16px}
+.lock .ic{width:44px;height:44px;border-radius:999px;background:var(--high);display:flex;align-items:center;justify-content:center;flex:none;color:var(--primary)}
+.revealed{margin-top:10px;padding:12px;border-radius:10px;background:var(--low)}
+/* нижнее меню */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;background:color-mix(in oklab,var(--lowest) 92%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--low);padding-bottom:env(safe-area-inset-bottom)}
+.tabs .in{max-width:560px;margin:0 auto;height:64px;display:flex;justify-content:space-around;align-items:center}
+.tabs a{display:flex;flex-direction:column;align-items:center;gap:3px;font:500 10px var(--body);color:var(--outline);min-width:56px}
+.tabs a.on{color:var(--primary);font-weight:600}
+.tabs a .ms{font-size:24px}
+.tabs a.plus{width:52px;height:52px;border-radius:999px;background:var(--primary);color:#000;justify-content:center;min-width:0}
+.busy{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;z-index:60;text-align:center;padding:24px}
+.busy .ring{width:56px;height:56px;border-radius:999px;border:2px solid var(--outv);border-top-color:var(--primary);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:var(--high);border:1px solid var(--outv);color:var(--on);padding:12px 16px;border-radius:12px;font:500 13px/18px var(--body);z-index:70;width:min(520px,90vw)}
+.disc{font:400 12px/16px var(--body);color:var(--outline);margin:0}
+</style>
+</head>
+<body>
+<div class="app" id="shell">
+  <header class="top" id="top"></header>
+  <main id="app"></main>
+</div>
+<nav class="tabs" aria-label="Основное меню"><div class="in">
+  <a href="#/" data-r="home"><span class="ms">home</span>Главная</a>
+  <a href="#/diary" data-r="diary"><span class="ms">menu_book</span>Дневник</a>
+  <a href="#/new" data-r="new" class="plus" aria-label="Новая запись"><span class="ms">add</span></a>
+  <a href="#/capsule" data-r="capsule"><span class="ms">hourglass_empty</span>Капсула</a>
+  <a href="#/calendar" data-r="calendar"><span class="ms">calendar_month</span>Календарь</a>
+</div></nav>
+<script>
+'use strict';
+/* =====================================================================
+   Дневник атмосферы дня — прототип.
+   Поток: запись (текст + фото + песня) → анализ вайба → тема всего сайта
+   → воспоминание (canvas) → папка дня → архив.
+   Анализ сейчас локальный (правила). Чтобы подключить ИИ, укажите
+   AI_ENDPOINT (например, Supabase Edge Function) — он должен вернуть JSON
+   по схеме из AI_PROMPT. Ответ ИИ всё равно проходит через правила системы.
+   ===================================================================== */
+const AI_ENDPOINT = '';
+const AI_PROMPT = `Ты анализируешь запись личного дневника. На входе: текст дня, доминирующие цвета фото,
+описание песни (исполнитель, название, темп, лад). Верни только JSON:
+{"scales":{"warmth":0..1,"energy":0..1,"tension":0..1,"sadness":0..1},
+ "title":"название папки дня, 3-7 слов, спокойный тон, без эмодзи и кавычек",
+ "caption":"короткая подпись, до 60 символов, словами пользователя",
+ "nostalgia":true|false,
+ "hits":{"warm":[слова],"cold":[слова],"tension":[слова]}}
+Не ставь диагнозов и не называй эмоции медицинскими терминами.`;
+
+/* ---------- утилиты ---------- */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function hashStr(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+const MONTHS = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const MONTHS_NOM = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const fmtDate = d => { const [y,m,dd] = d.split('-'); return `${dd}.${m}.${y}`; };
+const fmtLong = d => { const [y,m,dd] = d.split('-').map(Number); return `${dd} ${MONTHS[m-1]} ${y}`; };
+const todayISO = () => { const n = new Date(); return new Date(n.getTime() - n.getTimezoneOffset()*60000).toISOString().slice(0,10); };
+function toast(msg, ms = 3800){ const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), ms); }
+
+/* ---------- цвет: sRGB ↔ OKLCH ---------- */
+const toLin = c => { c /= 255; return c <= 0.04045 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); };
+const toSrgb = c => Math.round(clamp(c <= 0.0031308 ? 12.92*c : 1.055*Math.pow(c, 1/2.4) - 0.055) * 255);
+function rgbToOklch({r,g,b}){
+  const R=toLin(r),G=toLin(g),B=toLin(b);
+  const l=Math.cbrt(0.4122214708*R+0.5363325363*G+0.0514459929*B);
+  const m=Math.cbrt(0.2119034982*R+0.6806995451*G+0.1073969566*B);
+  const s=Math.cbrt(0.0883024619*R+0.2817188376*G+0.6299787005*B);
+  const L=0.2104542553*l+0.7936177850*m-0.0040720468*s;
+  const a=1.9779984951*l-2.4285922050*m+0.4505937099*s;
+  const bb=0.0259040371*l+0.7827717662*m-0.8086757660*s;
+  let h=Math.atan2(bb,a)*180/Math.PI; if(h<0)h+=360;
+  return {L, C:Math.hypot(a,bb), h};
+}
+function oklchToRgb(L, C, h){
+  for (let i = 0; i < 40; i++){
+    const a=C*Math.cos(h*Math.PI/180), b=C*Math.sin(h*Math.PI/180);
+    const l=(L+0.3963377774*a+0.2158037573*b)**3, m=(L-0.1055613458*a-0.0638541728*b)**3, s=(L-0.0894841775*a-1.2914855480*b)**3;
+    const R=4.0767416621*l-3.3077115913*m+0.2309699292*s, G=-1.2684380046*l+2.6097574011*m-0.3413193965*s, B=-0.0041960863*l-0.7034186147*m+1.7076147010*s;
+    if ((R>=-0.001&&R<=1.001&&G>=-0.001&&G<=1.001&&B>=-0.001&&B<=1.001) || C < 0.001) return {r:toSrgb(R), g:toSrgb(G), b:toSrgb(B)};
+    C *= 0.9;
+  }
+  return {r:128,g:128,b:128};
+}
+const hex = ({r,g,b}) => '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+const fromHex = h => ({r:parseInt(h.slice(1,3),16), g:parseInt(h.slice(3,5),16), b:parseInt(h.slice(5,7),16)});
+const ok = (L,C,h) => hex(oklchToRgb(L,C,((h%360)+360)%360));
+function relLum(h){ const {r,g,b} = fromHex(h); return 0.2126*toLin(r)+0.7152*toLin(g)+0.0722*toLin(b); }
+function contrast(a,b){ const x=relLum(a), y=relLum(b); return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05); }
+function mixHue(a, b, t){ let d = ((b - a + 540) % 360) - 180; return (a + d*t + 360) % 360; }
+function hueName(h, C){
+  if (C < 0.045) return 'серый';
+  const names = [[20,'красный'],[45,'коралловый'],[80,'охра и оранжевый'],[112,'жёлтый'],[165,'зелёный'],[215,'бирюзовый'],[275,'синий'],[325,'фиолетовый'],[361,'розовый']];
+  return names.find(([b]) => h < b)[1];
+}
+
+/* ---------- анализ текста ---------- */
+const DICT = {
+  warm: ['тепл','уют','какао','чай','чаем','обним','солнц','любл','люби','девушк','парн','друз','мам','плед','свеч','смея','смех','вкусн','горяч','термос','дом','семь'],
+  cold: ['холод','дожд','ветер','ветр','серый','серо','офис','одна','один','одинок','мороз','пуст','устал','темн','ноч'],
+  hi: ['бега','бег','танц','концерт','вечерин','быстр','спорт','крич','весел','праздн','море','драйв','кофе','шумн','прыга','конфетти'],
+  lo: ['спокойн','тих','медлен','лежал','спал','устал','лени','ленив','отдых','сидел','молч'],
+  tension: ['дедлайн','срочн','сдач','экзамен','нерв','стресс','тревож','спор','ссор','проект','опазд','паник','раздраж','злил','билд','работ'],
+  sad: ['груст','плак','скуч','одинок','потер','тоск','жаль','одна'],
+  joy: ['счаст','радост','рада','весел','смея','смех','кайф','класс','обожа','ура'],
+  nostalgia: ['вспомн','детств','давно','бабушк','ностальг','прошл'],
+};
+const PHRASES = { hi: ['день рожд'], lo: ['ничего не хотел'], nostalgia: ['как раньше','когда-то'] };
+function analyzeText(raw){
+  const t = raw.toLowerCase().replace(/ё/g,'е');
+  const words = t.split(/[^a-zа-я-]+/).filter(Boolean);
+  const hits = {};
+  for (const [k, stems] of Object.entries(DICT)){
+    const found = new Set();
+    for (const w of words) if (stems.some(s => w.startsWith(s))) found.add(w);
+    for (const p of (PHRASES[k] || [])) if (t.includes(p)) found.add(p);
+    hits[k] = [...found];
+  }
+  const n = k => hits[k].length;
+  const has = arr => arr.some(s => words.some(w => w.startsWith(s)) || (s.includes(' ') && t.includes(s)));
+  const scales = {
+    warmth: clamp(0.5 + 0.11*(n('warm') - n('cold')) + 0.04*n('joy') - 0.05*n('sad')),
+    energy: clamp(0.5 + 0.12*(n('hi') - n('lo')) + 0.05*n('joy') - 0.06*n('sad')),
+    tension: clamp(0.15 + 0.17*n('tension') - 0.03*n('warm')),
+    sadness: clamp(0.18*n('sad')),
+  };
+  let tod = null;
+  if (t.includes('до утра') || has(['ноч','полноч'])) tod = 'night';
+  else if (has(['вечер','закат','садил'])) tod = 'evening';
+  else if (has(['утр','рассвет','проснул'])) tod = 'morning';
+  let season = null;
+  if (has(['осен','листь','листоп','октябр'])) season = 'autumn';
+  else if (has(['зим','снег','мороз','декабр','январ','феврал','сугроб'])) season = 'winter';
+  else if (has(['весн','цвел','март','апрел'])) season = 'spring';
+  else if (has(['летн','летом','жар','пляж','июн','июл','август'])) season = 'summer';
+  return { scales, hits, tod, season, nostalgia: n('nostalgia') > 0, raw: t, words };
+}
+
+/* ---------- тема дня: сцена, погода, место, событие ---------- */
+const RX = (frag) => new RegExp('(?:^|[^а-я])(?:' + frag + ')', 'i');
+const has = (t, frag) => RX(frag).test(t);
+function sceneKind(t){
+  if (has(t, 'день рожд|вечерин|концерт|праздн|танц|клуб|свадьб|выпускн')) return 'party';
+  if (has(t, 'офис|дедлайн|сдач|билд|ноутбук|компьютер|работ')) return 'office';
+  if (has(t, 'мор(?:е|я|ю|ем|ск)|пляж|озер|океан|рек(?:а|и|е|у|ой)(?![а-я])')) return 'sea';
+  if (has(t, 'гор(?:ы|ах|ам)(?![а-я])|поход')) return 'mountains';
+  if (has(t, 'парк|лес(?:у|а|ом)?(?![а-я])|сад(?!и)|дерев|листь|алле')) return 'park';
+  if (has(t, 'город|улиц|метро|машин|проспект|мост')) return 'city';
+  if (has(t, 'дом(?:а|ой|у)?(?![а-я])|кухн|окн|комнат|балкон|кроват|диван|кафе|кофейн')) return 'room';
+  return 'field';
+}
+const weatherOf = t => has(t, 'дожд|ливн|ливен|лило') ? 'rain' : has(t, 'снег|снеж|метел') ? 'snow' : has(t, 'туман') ? 'fog' : null;
+const EVENTS = [['день рожд','День рождения'],['свадьб','Свадьба'],['выпускн','Выпускной'],['концерт','Концерт'],['новый год','Новый год'],['собеседован','Собеседование'],['свидан','Свидание'],['переезд','Переезд'],['поход','Поход'],['путешеств','Путешествие'],['поездк','Поездка']];
+const BEFORE = [['сдач','перед сдачей'],['дедлайн','перед дедлайном'],['экзамен','перед экзаменом'],['защит','перед защитой']];
+const PLACES2 = [
+  ['мор(?:е|я|ю|ем|ск)','море','n','у моря'],['пляж','пляж','m','на пляже'],['озер','озеро','n','у озера'],['рек(?:а|и|е|у|ой)(?![а-я])','река','f','у реки'],['пруд','пруд','m','у пруда'],
+  ['парк','парк','m','в парке'],['лес(?:у|а|ом)?(?![а-я])','лес','m','в лесу'],['сад(?:у|а|ом|ик)?(?![а-я])','сад','m','в саду'],['гор(?:ы|ах|ам)(?![а-я])','горы','p','в горах'],
+  ['офис','офис','m','в офисе'],['кафе','кафе','n','в кафе'],['кофейн','кофейня','f','в кофейне'],['ресторан','ресторан','m','в ресторане'],['балкон','балкон','m','на балконе'],
+  ['кухн','кухня','f','на кухне'],['дач(?:а|е|у|и)(?![а-я])','дача','f','на даче'],['каток|катк','каток','m','на катке'],['универ','универ','m','в универе'],['школ','школа','f','в школе'],
+  ['город','город','m','в городе'],['улиц','улица','f','на улице'],['метро','метро','n','в метро'],['поезд','поезд','m','в поезде'],['дом(?:а|ой|у)?(?![а-я])','дом','home','дома']];
+const THINGS2 = [['какао','какао','тёплое какао в руках'],['кофе','кофе','очередная чашка кофе'],['чай|чаем|чая','горячий чай','горячий чай'],['арбуз','арбуз','сладкий арбуз'],['торт','торт','торт со свечами'],['пицц','пицца','пицца на двоих'],
+  ['конфетти','конфетти','конфетти повсюду'],['гитар','гитара','гитара по кругу'],['книг','книги','страницы любимой книги'],['фильм|кино','кино','фильм на вечер'],['звезд','звёзды','звёзды над головой'],['закат','закат','медленный закат'],
+  ['костр|костер','костёр','тёплый костёр'],['морожен','мороженое','мороженое'],['разговор|разговарив|говорили','долгие разговоры','разговоры, которые не хотелось обрывать'],['листь','листья','жёлтые листья под ногами'],['пианино','пианино','пианино в наушниках'],['электрон','электроника','электроника в наушниках'],['музык','музыка','музыка на фоне']];
+const COMP2 = [['девушк','вдвоём','рядом с ней'],['парн','вдвоём','рядом с ним'],['друз','с друзьями','среди друзей'],['мам','с мамой','рядом с мамой'],['пап','с папой','рядом с папой'],['семь','с семьёй','вся семья вместе'],['коллег|команд','с командой','с командой'],['одна|один|одинок','наедине с собой','наедине с собой']];
+const ADJ = { autumn:['Осенний','Осенняя','Осеннее','Осенние'], winter:['Зимний','Зимняя','Зимнее','Зимние'], spring:['Весенний','Весенняя','Весеннее','Весенние'], summer:['Летний','Летняя','Летнее','Летние'],
+  night:['Ночной','Ночная','Ночное','Ночные'], evening:['Вечерний','Вечерняя','Вечернее','Вечерние'], morning:['Утренний','Утренняя','Утреннее','Утренние'],
+  rain:['Дождливый','Дождливая','Дождливое','Дождливые'], snow:['Снежный','Снежная','Снежное','Снежные'], fog:['Туманный','Туманная','Туманное','Туманные'],
+  tension:['Нервный','Нервная','Нервное','Нервные'], joy:['Шумный','Шумная','Шумное','Шумные'], quiet:['Тихий','Тихая','Тихое','Тихие'], warm:['Тёплый','Тёплая','Тёплое','Тёплые'] };
+const GI = {m:0, f:1, n:2, p:3, home:0};
+const TOD_NOUN = { night:['Ночь','f'], evening:['Вечер','m'], morning:['Утро','n'] };
+function topicOf(A){
+  const t = A.raw, find = (list) => list.find(e => has(t, e[0]));
+  return { place: find(PLACES2), things: THINGS2.filter(e => has(t, e[0])), comp: find(COMP2), event: EVENTS.find(e => t.includes(e[0])), before: BEFORE.find(e => has(t, e[0])), weather: weatherOf(t), firstSnow: t.includes('первый снег') };
+}
+function moodAdj(s){ return s.tension > 0.6 ? 'tension' : s.energy > 0.65 ? 'joy' : s.warmth > 0.6 ? 'warm' : 'quiet'; }
+function makeTitle(A, scales){
+  const s = scales || A.scales, o = topicOf(A), thing = o.things.find(x => !(o.place && o.place[1].slice(0, 4) === x[1].slice(0, 4))), cap = x => x.charAt(0).toUpperCase() + x.slice(1);
+  let title;
+  if (o.firstSnow) title = 'Первый снег' + (thing && thing[1] !== 'листья' ? ' и ' + thing[1] : o.place ? ' ' + o.place[3] : A.tod ? ' ' + {night:'ночью', evening:'вечером', morning:'утром'}[A.tod] : ' за окном');
+  else if (o.before){ const tn = TOD_NOUN[A.tod] || ['День']; title = `${tn[0]} ${o.place ? o.place[3] + ' ' : ''}${o.before[1]}`; }
+  else if (o.event) title = o.event[1] + (o.place && o.place[2] !== 'home' ? ' ' + o.place[3] : o.comp ? ' ' + o.comp[1] : thing ? ' и ' + thing[1] : A.season ? ' ' + {autumn:'осенью', winter:'зимой', spring:'весной', summer:'летом'}[A.season] : '');
+  else if (o.place && o.place[2] !== 'home'){
+    const set = ADJ[A.season] || ADJ[o.weather] || ADJ[A.tod] || ADJ[moodAdj(s)];
+    title = `${set[GI[o.place[2]]]} ${o.place[1]}` + (thing ? ' и ' + thing[1] : o.comp ? ' ' + o.comp[1] : '');
+  } else {
+    const tn = TOD_NOUN[A.tod] || ['день', 'm'], set = ADJ[o.weather] || ADJ[A.season] || ADJ[moodAdj(s)];
+    title = `${set[GI[tn[1]]]} ${tn[0].toLowerCase()}` + (o.place ? ' дома' : '') + (o.place && o.comp ? ' ' + o.comp[1] : thing ? ' и ' + thing[1] : o.comp ? ' ' + o.comp[1] : '');
+  }
+  let w = title.split(' ');
+  if (w.length < 3) w = w.concat((A.tod === 'night' ? 'этой ночью' : A.tod === 'evening' ? 'этим вечером' : A.tod === 'morning' ? 'этим утром' : 'в этот день').split(' '));
+  return cap(w.slice(0, 7).join(' '));
+}
+const OPEN = {
+  rain:['За окном весь день шёл дождь.','Дождь не прекращался ни на минуту.'], snow:['Город медленно укрывало снегом.','Снег падал тихо и долго.'], firstSnow:['Город проснулся под первым снегом.'], fog:['Всё вокруг тонуло в мягком тумане.'],
+  autumn:['Осень шуршала под ногами.','Воздух пах листьями и холодом.'], winter:['Зима принесла с собой тишину.'], spring:['Весна была совсем рядом.'], summer:['Лето стояло в самом разгаре.','Было жарко, солнце не жалело никого.'],
+  night:['Ночь, когда город уже спал.','Поздняя ночь, свет экрана и тишина вокруг.'], evening:['Вечер, который не торопился заканчиваться.','Вечерний свет ложился мягко и низко.'], morning:['Утро началось тихо и медленно.','Раннее утро, ещё пахнущее сном.'],
+  day:['День, собранный из маленьких деталей.','Обычный день, который захотелось запомнить.'], party:['Вечер, который превратился в праздник.','Музыка, огни и никакой тишины.'] };
+const CLOSE = { 'Тепло':['Время шло медленнее, и этого было достаточно.'], 'Напряжение':['Всё держалось на упрямстве — и всё получилось.'], 'Радость':['Шумно, ярко и по-настоящему живо.'],
+  'Грусть':['Немного грустно, но по-своему спокойно.'], 'Ностальгия':['На минуту показалось, что вернулось детство.'], 'Тишина':['Ничего особенного — и поэтому особенный день.'], 'Вдохновение':['Лёгкий день, после которого хочется большего.'] };
+const CAPTIONS = { 'Тепло':'медленно и тепло', 'Напряжение':'на кофе и упрямстве', 'Радость':'громко и счастливо', 'Грусть':'тихо и немного грустно', 'Ностальгия':'как в детстве', 'Тишина':'тишина, которой хватало', 'Вдохновение':'легко и светло' };
+function makeStory(A, v, seed){
+  const o = topicOf(A), R = mulberry32(seed || 1), pick = a => a[Math.floor(R() * a.length)], cap = x => x.charAt(0).toUpperCase() + x.slice(1);
+  const key = o.firstSnow ? 'firstSnow' : o.weather || (sceneKind(A.raw) === 'party' ? 'party' : null) || A.season || A.tod || 'day';
+  const parts = [pick(OPEN[key])];
+  const det = [o.place ? o.place[3] : null, o.comp ? o.comp[2] : null, ...o.things.slice(0, 2).map(x => x[2])].filter(Boolean);
+  if (det.length) parts.push(cap(det.join(', ')) + '.');
+  const contrast = v.textInfo.hits.cold.length && v.textInfo.hits.warm.length;
+  if (contrast) parts.push('Снаружи было холодно, а внутри — тепло.');
+  const mood = moodOf(v);
+  parts.push(pick(CLOSE[mood.short] || CLOSE['Вдохновение']));
+  return { description: parts.join(' '), caption: contrast ? 'холодно снаружи, тепло внутри' : CAPTIONS[mood.short] || 'легко и светло' };
+}
+
+/* ---------- анализ фото ---------- */
+function analyzePhotos(sources){
+  const bins = new Map(); let lumSum = 0, chromaSum = 0, warmW = 0, coolW = 0, total = 0;
+  const c = document.createElement('canvas'); c.width = c.height = 48; const x = c.getContext('2d', {willReadFrequently:true});
+  for (const src of sources){
+    x.clearRect(0,0,48,48); x.drawImage(src, 0, 0, 48, 48);
+    const d = x.getImageData(0,0,48,48).data;
+    for (let i = 0; i < d.length; i += 4){
+      const r=d[i], g=d[i+1], b=d[i+2]; const o = rgbToOklch({r,g,b});
+      lumSum += o.L; chromaSum += o.C; total++;
+      if (o.C > 0.05){ if (o.h > 20 && o.h < 115) warmW += o.C; else if (o.h > 180 && o.h < 300) coolW += o.C; }
+      const key = (r>>5)<<6 | (g>>5)<<3 | (b>>5);
+      const bin = bins.get(key) || {r:0,g:0,b:0,n:0}; bin.r+=r; bin.g+=g; bin.b+=b; bin.n++; bins.set(key, bin);
+    }
+  }
+  const top = [...bins.values()].sort((a,b) => b.n - a.n).slice(0, 12).map(b => ({r:Math.round(b.r/b.n), g:Math.round(b.g/b.n), b:Math.round(b.b/b.n), n:b.n}));
+  let best = top[0], bestScore = -1;
+  for (const c of top){ const o = rgbToOklch(c); const sc = c.n * (o.C + 0.02); if (sc > bestScore){ bestScore = sc; best = c; } }
+  const bo = rgbToOklch(best);
+  const ws = warmW + coolW || 1;
+  return {
+    colors: top.slice(0, 5).map(hex), hue: bo.h, chroma: bo.C, lum: lumSum/total,
+    warm: clamp(0.5 + 0.45*(warmW - coolW)/ws), energy: clamp((chromaSum/total)*5),
+    name: hueName(bo.h, bo.C),
+  };
+}
+
+/* ---------- анализ музыки ---------- */
+const GENRES = [
+  [['sinatra','синатр','jazz','джаз','swing','свинг'], {genre:'джаз / ретро', bpm:74, energy:0.32, minor:false}],
+  [['einaudi','эйнауди','piano','пианино','classical','классик','chopin','шопен'], {genre:'фортепиано', bpm:66, energy:0.2, minor:true}],
+  [['lofi','lo-fi','nujabes','chill'], {genre:'lo-fi', bpm:84, energy:0.32, minor:null}],
+  [['ambient','эмбиент'], {genre:'эмбиент', bpm:62, energy:0.15, minor:null}],
+  [['techno','техно','electro','электро','house','daft punk','edm'], {genre:'электроника', bpm:126, energy:0.85, minor:null}],
+  [['rock','рок','metal','punk','панк'], {genre:'рок', bpm:132, energy:0.85, minor:null}],
+  [['rap','рэп','hip-hop','хип-хоп','trap'], {genre:'хип-хоп', bpm:92, energy:0.65, minor:null}],
+  [['pop','поп','dua lipa','levitating','dance'], {genre:'поп', bpm:118, energy:0.75, minor:false}],
+];
+const TEMPO_CHIP = { slow:{bpm:70, energy:0.28}, mid:{bpm:100, energy:0.55}, fast:{bpm:128, energy:0.82} };
+function musicFromLink(url, label, tempo, mode){
+  const s = (label + ' ' + url).toLowerCase();
+  let meta = {genre:null, bpm:100, energy:0.5, minor:null};
+  for (const [keys, m] of GENRES) if (keys.some(k => s.includes(k))) { meta = {...m}; break; }
+  if (tempo && TEMPO_CHIP[tempo]) Object.assign(meta, TEMPO_CHIP[tempo]);
+  if (mode === 'minor') meta.minor = true; else if (mode === 'major') meta.minor = false;
+  let service = 'ссылка', embed = null;
+  const sp = url.match(/open\.spotify\.com\/(?:intl-[a-z]+\/)?(track|album|playlist)\/([A-Za-z0-9]+)/);
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|music\.youtube\.com\/watch\?v=)([\w-]{11})/);
+  if (/spotify/.test(url)) service = 'Spotify'; else if (/youtu/.test(url)) service = 'YouTube'; else if (/yandex/.test(url)) service = 'Яндекс Музыка'; else if (/apple/.test(url)) service = 'Apple Music'; else if (/soundcloud/.test(url)) service = 'SoundCloud';
+  if (sp) embed = `https://open.spotify.com/embed/${sp[1]}/${sp[2]}`;
+  if (yt) embed = `https://www.youtube.com/embed/${yt[1]}`;
+  return { source:'link', url, label: label || service, service, embed, tempoChip: tempo || null, ...meta };
+}
+async function analyzeAudioFile(file){
+  const buf = await file.arrayBuffer();
+  const AC = window.AudioContext || window.webkitAudioContext; const ac = new AC();
+  const audio = await ac.decodeAudioData(buf); ac.close();
+  const sr = audio.sampleRate, ch = audio.getChannelData(0);
+  const from = audio.duration > 50 ? Math.floor(sr*20) : 0, to = Math.min(ch.length, from + sr*30);
+  const hop = 512, env = [];
+  let sumSq = 0;
+  for (let i = from; i + hop < to; i += hop){ let e = 0; for (let j = 0; j < hop; j++){ const v = ch[i+j]; e += v*v; } sumSq += e; env.push(Math.sqrt(e/hop)); }
+  const onset = env.map((v,i) => i ? Math.max(0, v - env[i-1]) : 0);
+  const fps = sr / hop; let best = 100, bestV = -1;
+  for (let bpm = 60; bpm <= 180; bpm++){
+    const lag = Math.round(60 * fps / bpm); let v = 0;
+    for (let i = lag; i < onset.length; i++) v += onset[i] * onset[i-lag];
+    if (v > bestV){ bestV = v; best = bpm; }
+  }
+  if (best > 160) best = Math.round(best/2);
+  const rms = Math.sqrt(sumSq / Math.max(1, (to-from)));
+  const name = file.name.replace(/\.[^.]+$/,'').replace(/[_]+/g,' ');
+  return { source:'file', label:name, service:'аудиофайл', bpm:best, energy:clamp(rms*4.2), minor:null, genre:null };
+}
+
+/* ---------- вайб: сведение текста, фото и музыки ---------- */
+function combine(T, P, M){
+  const mTempo = clamp((M.bpm - 60) / 100);
+  const mWarm = M.minor === true ? 0.32 : M.minor === false ? 0.62 : 0.5;
+  return {
+    warmth: clamp(0.55*T.scales.warmth + 0.30*P.warm + 0.15*mWarm),
+    energy: clamp(0.45*T.scales.energy + 0.20*P.energy + 0.35*M.energy),
+    tension: clamp(0.8*T.scales.tension + 0.2*(M.energy > 0.7 ? (M.minor ? 0.8 : 0.5) : 0.15)),
+    tempo: clamp(0.25*T.scales.energy + 0.75*mTempo),
+    sadness: T.scales.sadness,
+  };
+}
+const TECH = {
+  monet:{name:'Моне', what:'мазки и свет', why:'тепло и неспешно → мазки и мягкий свет в духе Клода Моне'},
+  kandinsky:{name:'Кандинский', what:'геометрия', why:'напряжение и быстрый ритм → геометрия линий и пятен в духе Кандинского'},
+  film:{name:'плёнка', what:'зерно и засвет', why:'воспоминание о прошлом → плёночное зерно, тёплый засвет, полароид'},
+  minimal:{name:'минимализм', what:'пустота и воздух', why:'тишина и мало энергии → японский минимализм: много пустоты вокруг кадра'},
+  riso:{name:'ризограф', what:'растр и пятна', why:'праздник и много энергии → ризо-печать: растр, яркие пятна, сдвиг слоёв'},
+};
+function finalize(v){
+  const s = v.scales, M = v.music, P = v.photo, T = v.textInfo;
+  let tech;
+  if (s.tension > 0.6 && s.energy > 0.45) tech = 'kandinsky';
+  else if (s.energy > 0.65 && s.tension < 0.5 && s.warmth > 0.45) tech = 'riso';
+  else if (T.nostalgia) tech = 'film';
+  else if (s.energy < 0.4 && (s.warmth < 0.48 || s.sadness > 0.25)) tech = 'minimal';
+  else if (s.warmth > 0.55) tech = 'monet';
+  else tech = 'film';
+  const dark = s.tension > 0.55 || T.tod === 'night' || (P.lum < 0.56) || (s.sadness > 0.3 && P.lum < 0.62);
+  const mode = dark ? 'dark' : 'light';
+  const frameDur = clamp(60 / M.bpm * 8, 2.2, 7);
+  const cut = s.tempo > 0.6 ? 'cut' : 'fade';
+  const air = clamp((1 - s.energy) * (M.minor ? 1.25 : 1));
+  const voice = { rate: +(0.82 + s.energy*0.36 + s.tempo*0.08).toFixed(2), pitch: +(0.92 + s.warmth*0.16 - s.tension*0.08).toFixed(2) };
+  voice.label = s.energy < 0.4 ? 'тихий, медленный, тёплый' : s.energy > 0.65 ? 'живой и быстрый' : s.tension > 0.6 ? 'ровный, собранный' : 'спокойный';
+  const rules = [];
+  const tempoWord = M.bpm < 85 ? 'медленная' : M.bpm < 112 ? 'средняя по темпу' : 'быстрая';
+  rules.push(`песня ${tempoWord} (${M.bpm} bpm${M.minor === true ? ', минор' : M.minor === false ? ', мажор' : ''}${M.genre ? ', ' + M.genre : ''}) → ${cut === 'cut' ? 'резкий монтаж' : 'плавная смена'} кадров каждые ${frameDur.toFixed(1)} с`);
+  if (air > 0.5) rules.push(`${M.minor ? 'минорная' : 'спокойная'} музыка и мало энергии → больше воздуха вокруг фото, приглушённая насыщенность`);
+  else if (s.energy > 0.65) rules.push('много энергии → насыщенные цвета, кадр почти без полей');
+  rules.push(`на фото доминирует ${P.name} → основа палитры; ${P.lum > 0.56 ? 'светлые' : 'тёмные'} кадры${T.tod === 'night' ? ' и ночь в тексте' : ''} → ${mode === 'dark' ? 'тёмная' : 'светлая'} тема сайта`);
+  const q = arr => arr.slice(0, 3).map(w => `«${w}»`).join(', ');
+  if (T.hits.warm.length && T.hits.cold.length) rules.push(`${q(T.hits.cold)} и ${q(T.hits.warm)} → тёплые акценты на прохладной основе`);
+  else if (T.hits.warm.length) rules.push(`${q(T.hits.warm)} → оттенки сдвигаются в тёплую сторону`);
+  else if (T.hits.cold.length) rules.push(`${q(T.hits.cold)} → оттенки сдвигаются в холодную сторону`);
+  if (T.hits.tension.length) rules.push(`${q(T.hits.tension)} → жёсткая сетка и высокий контраст`);
+  rules.push(TECH[tech].why);
+  rules.push(`озвучка: голос ${voice.label} (скорость ${voice.rate}, высота ${voice.pitch})`);
+  Object.assign(v, { technique: tech, mode, frameDur, cut, air, voice, rules });
+  const th = themeFromVibe(v);
+  v.swatch = { bg: th.bg, accent: th.accent, ink: th.ink, onAccent: contrast(th.accent, '#111111') > 6 ? '#111111' : '#f4efe6' };
+  return v;
+}
+function themeFromVibe(v){
+  const s = v.scales, P = v.photo, dark = v.mode === 'dark';
+  const target = s.warmth >= 0.5 ? 62 : 250;
+  const pull = clamp(Math.abs(s.warmth - 0.5) * 1.4, 0, 0.7);
+  const hue = P.chroma > 0.05 ? mixHue(P.hue, target, pull) : target;
+  const cA = clamp(0.05 + s.energy*0.13 - (v.music.minor ? 0.025 : 0) - s.sadness*0.03, 0.03, 0.2);
+  const th = dark ? {
+    bg: ok(0.17 + 0.04*s.warmth*(1 - s.tension), 0.012 + 0.022*s.energy, hue),
+    surface: ok(0.22, 0.016, hue), ink: ok(0.93, 0.022, hue), muted: ok(0.68, 0.022, hue), line: ok(0.33, 0.02, hue),
+    accent: ok(0.76, cA, hue), deep: ok(0.14, 0.03, hue),
+  } : {
+    bg: ok(0.955 - 0.025*s.energy, 0.014 + 0.022*s.warmth, hue),
+    surface: ok(0.91, 0.02, hue), ink: ok(0.21, 0.025, hue), muted: ok(0.5, 0.02, hue), line: ok(0.83, 0.02, hue),
+    accent: ok(0.58, cA, hue), deep: ok(0.2, 0.04, hue),
+  };
+  th.accent2 = ok(dark ? 0.7 : 0.6, cA, hue + (v.technique === 'kandinsky' ? 180 : 42));
+  th.accent3 = ok(0.86, 0.15, 95);
+  if (contrast(th.ink, th.bg) < 7) th.ink = dark ? '#f6f1e8' : '#141312';
+  th.mode = v.mode; th.hue = hue;
+  th.grain = {monet:0.09, kandinsky:0.06, film:0.16, minimal:0.05, riso:0.12}[v.technique] ?? 0.08;
+  return th;
+}
+function uiTheme(v){
+  const th = themeFromVibe(v), h = th.hue, s = v.scales;
+  const c = 0.03 + 0.035*s.energy + 0.015*Math.abs(s.warmth - 0.5)*2 - 0.012*s.sadness;
+  const L0 = 0.15 + 0.03*s.energy - 0.02*s.tension;
+  return { bg: ok(L0, c, h), lowest: ok(L0 - 0.03, c*0.9, h), low: ok(L0 + 0.045, c*1.05, h), cont: ok(L0 + 0.075, c*1.05, h), high: ok(L0 + 0.125, c, h), highest: ok(L0 + 0.17, c*0.95, h),
+    on: ok(0.93, 0.025, h), onv: ok(0.83, 0.035, h), outline: ok(0.68, 0.04, h), outv: ok(0.4, 0.035, h), primary: ok(0.95, 0.04 + 0.03*s.energy, h), 'on-primary': ok(0.22, 0.03, h),
+    aura: ok(0.74, clamp(0.11 + 0.12*s.energy - 0.03*s.sadness, 0.08, 0.22), h) };
+}
+function applyTheme(day){
+  const t = uiTheme(day.vibe), r = document.documentElement.style;
+  for (const [k, v] of Object.entries(t)) r.setProperty('--' + k, v);
+  let m = document.querySelector('meta[name=theme-color]'); if (!m){ m = document.createElement('meta'); m.name = 'theme-color'; document.head.appendChild(m); } m.content = t.bg;
+}
+
+/* ---------- ИИ (необязательно) ---------- */
+async function analyzeWithAI(payload){
+  if (!AI_ENDPOINT) return null;
+  try { const r = await fetch(AI_ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:AI_PROMPT, ...payload})}); return r.ok ? await r.json() : null; }
+  catch { return null; }
+}
+async function buildVibe(text, photoSources, music){
+  const T = analyzeText(text), P = analyzePhotos(photoSources);
+  const ai = await analyzeWithAI({text, photoColors:P.colors, music:{label:music.label, bpm:music.bpm, minor:music.minor, genre:music.genre}});
+  if (ai){ if (ai.scales) Object.assign(T.scales, ai.scales); if (typeof ai.nostalgia === 'boolean') T.nostalgia = ai.nostalgia; if (ai.hits) Object.assign(T.hits, ai.hits); }
+  const v = { scales: combine(T, P, music), photo: P, music: {bpm:music.bpm, energy:music.energy, minor:music.minor, genre:music.genre},
+    textInfo: { hits:{warm:T.hits.warm, cold:T.hits.cold, tension:T.hits.tension}, tod:T.tod, season:T.season, nostalgia:T.nostalgia, scene: sceneKind(T.raw), weather: weatherOf(T.raw) } };
+  finalize(v);
+  let title = makeTitle(T, v.scales), { description, caption } = makeStory(T, v, hashStr(text));
+  if (ai){ if (ai.title && ai.title.split(' ').length >= 3 && ai.title.split(' ').length <= 7) title = ai.title; if (ai.description) description = ai.description; if (ai.caption) caption = ai.caption.slice(0, 60); }
+  return { vibe: v, title, caption, description };
+}
+
+/* ---------- демо-фото (процедурные «снимки» для демо-дней) ---------- */
+const sceneCache = new Map();
+function scene(name, seed){
+  const key = name + seed; if (sceneCache.has(key)) return sceneCache.get(key);
+  const W = 1200, H = 900, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d'), R = mulberry32(seed * 977 + hashStr(name)), r = (a,b) => a + R()*(b-a);
+  const grad = (stops) => { const g = x.createLinearGradient(0,0,0,H); stops.forEach(([o,col]) => g.addColorStop(o,col)); x.fillStyle = g; x.fillRect(0,0,W,H); };
+  const blob = (cx,cy,rad,col,a) => { const g = x.createRadialGradient(cx,cy,0,cx,cy,rad); g.addColorStop(0,col); g.addColorStop(1,'rgba(0,0,0,0)'); x.globalAlpha = a; x.fillStyle = g; x.fillRect(cx-rad,cy-rad,rad*2,rad*2); x.globalAlpha = 1; };
+  if (name === 'autumn'){
+    grad([[0,'#f7cf86'],[0.55,'#e08b3e'],[1,'#a2531f']]);
+    blob(r(300,900), 260, 320, '#fff1c4', 0.7);
+    for (let i = 0; i < 7; i++){ const tx = r(60,1140), w = r(16,34); x.fillStyle = '#3d2414'; x.beginPath(); x.moveTo(tx-w/2,H); x.lineTo(tx-w*0.2,r(120,300)); x.lineTo(tx+w*0.2,r(120,300)); x.lineTo(tx+w/2,H); x.fill(); }
+    const cols = ['#f4c84f','#ea8f2a','#c8521d','#f8e08e','#d9682a'];
+    for (let i = 0; i < 1400; i++){ const ly = R() < 0.65 ? r(0, 420) : r(660, 900); x.fillStyle = cols[i % cols.length]; x.globalAlpha = r(0.5, 0.95); x.beginPath(); x.ellipse(r(0,W), ly, r(5,16), r(3,8), r(0,3.14), 0, 7); x.fill(); }
+    x.globalAlpha = 1; x.fillStyle = 'rgba(255,230,180,.35)'; x.beginPath(); x.moveTo(420,H); x.quadraticCurveTo(620,700,560,640); x.lineTo(640,640); x.quadraticCurveTo(760,720,860,H); x.fill();
+    x.fillStyle = '#5a3420'; x.fillRect(r(480,620), 700, 60, 70); x.fillStyle = '#7a4a2c'; x.fillRect(r(660,760), 712, 54, 62);
+  } else if (name === 'office'){
+    grad([[0,'#091121'],[1,'#1b2a45']]);
+    for (let b = 0; b < 9; b++){ const bx = b*140 + r(-20,20), bh = r(260,620); x.fillStyle = '#0e1a30'; x.fillRect(bx, H-bh-260, 120, bh);
+      for (let wy = H-bh-240; wy < H-280; wy += 26) for (let wx = bx+10; wx < bx+110; wx += 20) if (R() < 0.35){ x.fillStyle = R() < 0.8 ? 'rgba(255,205,110,.75)' : 'rgba(140,190,255,.8)'; x.fillRect(wx, wy, 10, 14); } }
+    x.fillStyle = '#05080f'; x.fillRect(0, H-260, W, 260);
+    blob(600, 560, 420, '#4d8dff', 0.55);
+    x.fillStyle = '#9cc4ff'; x.fillRect(380, 420, 440, 260); x.fillStyle = '#1b2a45'; for (let l = 0; l < 9; l++){ x.fillRect(410, 450 + l*24, r(120,380), 8); }
+    x.fillStyle = '#0a0f1a'; x.fillRect(560, 680, 80, 60); x.fillRect(470, 740, 260, 14);
+    x.fillStyle = '#e8e2d6'; x.beginPath(); x.ellipse(900, 760, 40, 14, 0, 0, 7); x.fill(); x.fillRect(860, 700, 80, 60);
+  } else if (name === 'rain'){
+    grad([[0,'#5b646b'],[1,'#a3abb0']]);
+    for (let i = 0; i < 16; i++) blob(r(0,W), r(300,800), r(40,120), R() < 0.5 ? '#f0c27e' : '#bcd0de', 0.35);
+    x.strokeStyle = 'rgba(225,232,236,.35)'; x.lineWidth = 1.4;
+    for (let i = 0; i < 700; i++){ const sx = r(0,W), sy = r(0,H); x.beginPath(); x.moveTo(sx, sy); x.lineTo(sx - 6, sy + r(18,40)); x.stroke(); }
+    for (let i = 0; i < 140; i++){ x.fillStyle = 'rgba(255,255,255,.22)'; x.beginPath(); x.arc(r(0,W), r(0,H), r(2,7), 0, 7); x.fill(); }
+    x.fillStyle = '#2f3438'; x.fillRect(0, 0, 26, H); x.fillRect(W-26, 0, 26, H); x.fillRect(W/2-10, 0, 20, H); x.fillRect(0, H-60, W, 60);
+    x.fillStyle = '#e9e4da'; x.fillRect(900, 760, 90, 70); x.fillStyle = '#c9b79a'; x.fillRect(910, 770, 70, 10);
+  } else if (name === 'party'){
+    grad([[0,'#1c0a2d'],[1,'#3d1259']]);
+    const cols = ['#ff5fa2','#ffd23f','#3ee6e0','#9b5cff','#ff8a3d'];
+    for (let i = 0; i < 40; i++) blob(r(0,W), r(0,H), r(30,110), cols[i % 5], 0.55);
+    x.strokeStyle = 'rgba(255,240,200,.6)'; x.lineWidth = 2; x.beginPath(); x.moveTo(0,120); x.quadraticCurveTo(600,260,W,110); x.stroke();
+    for (let i = 0; i < 24; i++){ const px = i*52, py = 120 + Math.sin(i/24*Math.PI)*120; blob(px, py, 18, '#fff3c0', 0.9); }
+    for (let i = 0; i < 520; i++){ x.save(); x.translate(r(0,W), r(0,H)); x.rotate(r(0,6.28)); x.fillStyle = cols[i % 5]; x.fillRect(-5,-2.5,r(8,14),r(4,6)); x.restore(); }
+  } else if (name === 'snow'){
+    grad([[0,'#e6edf3'],[1,'#b6c5d3']]);
+    for (let b = 0; b < 7; b++){ const bx = b*180 + r(-30,30), by = r(420,560); x.fillStyle = '#6f7d8b'; x.beginPath(); x.moveTo(bx, by+60); x.lineTo(bx+90, by); x.lineTo(bx+180, by+60); x.fill(); x.fillStyle = '#8796a4'; x.fillRect(bx+10, by+60, 160, H);
+      x.fillStyle = '#f4f7fa'; x.beginPath(); x.moveTo(bx-4, by+62); x.lineTo(bx+90, by-4); x.lineTo(bx+184, by+62); x.lineTo(bx+170, by+66); x.lineTo(bx+90, by+14); x.lineTo(bx+10, by+66); x.fill();
+      for (let k = 0; k < 4; k++) if (R() < 0.6){ x.fillStyle = 'rgba(255,196,120,.85)'; x.fillRect(bx+30+k*34, by+110, 18, 24); } }
+    for (let i = 0; i < 900; i++){ x.fillStyle = 'rgba(255,255,255,.9)'; x.beginPath(); x.arc(r(0,W), r(0,H), r(1,4.5), 0, 7); x.fill(); }
+    x.fillStyle = '#c96a3c'; x.fillRect(920, 700, 110, 120); x.beginPath(); x.ellipse(975, 700, 55, 14, 0, 0, 7); x.fillStyle = '#6b3a22'; x.fill();
+    x.strokeStyle = 'rgba(255,255,255,.8)'; x.lineWidth = 3; for (let k = 0; k < 3; k++){ x.beginPath(); x.moveTo(950+k*24, 680); x.bezierCurveTo(930+k*24, 640, 980+k*24, 620, 955+k*24, 580); x.stroke(); }
+  }
+  sceneCache.set(key, c); return c;
+}
+
+/* ---------- хранилище ---------- */
+const KEY = 'aftertone.days.v1';
+let DAYS = [];
+const sessionAudio = new Map();
+let storageOK = true, warned = false;
+function save(){
+  if (!storageOK){ if (!warned){ warned = true; toast('Здесь дни живут только до перезагрузки: предпросмотр не даёт сохранять. Скачайте файл и откройте в браузере, чтобы дни сохранялись.', 6000); } return false; }
+  try { localStorage.setItem(KEY, JSON.stringify(DAYS)); return true; }
+  catch (e) { toast('В браузере закончилось место: день сохранён только до перезагрузки. В рабочей версии хранилище — Supabase.'); return false; }
+}
+function load(){ try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null; } catch { storageOK = false; return null; } }
+const sorted = () => [...DAYS].sort((a,b) => a.date === b.date ? a.createdAt - b.createdAt : a.date < b.date ? -1 : 1);
+const dayNum = d => String(sorted().findIndex(x => x.id === d.id) + 1).padStart(3, '0');
+const latest = () => sorted().at(-1);
+
+const DEMO = [
+  { id:'demo-autumn', date:'2026-11-08', scene:'autumn', text:'Гуляли по парку с девушкой, всё в жёлтых листьях. Было холодно, но мы пили какао из термоса и долго разговаривали обо всём. Солнце садилось очень медленно.',
+    music:{ url:'https://open.spotify.com/search/Frank%20Sinatra%20Fly%20Me%20to%20the%20Moon', label:'Frank Sinatra — Fly Me to the Moon', tempo:'slow', mode:'major' } },
+  { id:'demo-office', date:'2026-11-12', scene:'office', text:'Ночь в офисе перед сдачей проекта. Срочный дедлайн, третий кофе, в наушниках электроника на повторе. Всё раздражало, но к трём ночи собрали билд.',
+    music:{ url:'https://open.spotify.com/search/Daft%20Punk%20Around%20the%20World', label:'Daft Punk — Around the World', tempo:'fast', mode:'' } },
+  { id:'demo-rain', date:'2026-11-16', scene:'rain', text:'Весь день шёл дождь. Сидела одна дома у окна, было немного грустно и тихо. Пила чай и слушала пианино, ничего не хотелось делать.',
+    music:{ url:'https://open.spotify.com/search/Ludovico%20Einaudi%20Nuvole%20Bianche', label:'Ludovico Einaudi — Nuvole Bianche', tempo:'slow', mode:'minor' } },
+  { id:'demo-party', date:'2026-11-18', scene:'party', text:'День рождения у друзей! Танцевали до утра, смеялись, кричали песни, конфетти было везде. Очень весело и шумно, просто счастье.',
+    music:{ url:'https://open.spotify.com/search/Dua%20Lipa%20Levitating', label:'Dua Lipa — Levitating', tempo:'fast', mode:'major' } },
+  { id:'demo-snow', date:'2026-11-20', scene:'snow', text:'Утром выпал первый снег. Вышла на балкон с горячим чаем, город был тихий и белый, как в детстве. Спокойное утро перед учёбой.',
+    music:{ url:'https://open.spotify.com/search/Nujabes%20Aruarian%20Dance', label:'Nujabes — Aruarian Dance', tempo:'mid', mode:'' } },
+];
+async function seedDemo(){
+  DAYS = [];
+  for (const [i, d] of DEMO.entries()){
+    const photos = [0,1,2].map(k => scene(d.scene, k + 1));
+    const music = musicFromLink(d.music.url, d.music.label, d.music.tempo, d.music.mode);
+    const { vibe, title, caption, description } = await buildVibe(d.text, photos, music);
+    DAYS.push({ id:d.id, demo:true, scene:d.scene, date:d.date, createdAt:i, text:d.text, photos:[], music, vibe, title, caption, description, v2:1, rev:0 });
+  }
+  save();
+}
+
+/* ---------- подготовка воспоминания ---------- */
+const prepCache = new Map();
+function loadImg(src){ return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; }); }
+async function photoSources(day){ return day.demo ? [0,1,2].map(k => scene(day.scene, k + 1)) : Promise.all(day.photos.map(loadImg)); }
+function makeCanvas(w, h){ const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+function processPhoto(src, tech, th, seed, str = 1){
+  const sw = src.naturalWidth || src.width, sh = src.naturalHeight || src.height, k = Math.min(1, 1000 / Math.max(sw, sh));
+  const w = Math.round(sw*k), h = Math.round(sh*k), c = makeCanvas(w, h), x = c.getContext('2d', {willReadFrequently:true});
+  x.drawImage(src, 0, 0, w, h);
+  const R = mulberry32(seed);
+  if (tech === 'monet'){
+    const data = x.getImageData(0,0,w,h).data;
+    if (str > 0.6){ const tiny = makeCanvas(Math.max(8, w/22|0), Math.max(8, h/22|0)); tiny.getContext('2d').drawImage(src, 0, 0, tiny.width, tiny.height); x.drawImage(tiny, 0, 0, w, h); x.globalAlpha = 0.5; x.drawImage(src, 0, 0, w, h); x.globalAlpha = 1; }
+    for (let i = 0, N = Math.round(1400 + 2600*str); i < N; i++){
+      const px = R()*w, py = R()*h, idx = ((py|0)*w + (px|0))*4;
+      const ang = Math.sin(px*0.006 + seed)*1.1 + Math.cos(py*0.008);
+      x.save(); x.translate(px, py); x.rotate(ang);
+      x.fillStyle = `rgba(${Math.min(255,data[idx]+8)},${data[idx+1]},${Math.max(0,data[idx+2]-6)},${0.16 + 0.3*str + R()*0.18})`;
+      x.beginPath(); x.ellipse(0, 0, 4 + R()*(10 + 8*str), 1.5 + R()*(2.5 + 2*str), 0, 0, 7); x.fill(); x.restore();
+    }
+    const g = x.createRadialGradient(w*0.6, h*0.3, 0, w*0.6, h*0.3, w*0.8); g.addColorStop(0, 'rgba(255,226,170,.22)'); g.addColorStop(1, 'rgba(255,226,170,0)'); x.fillStyle = g; x.fillRect(0,0,w,h);
+  } else if (tech === 'kandinsky' || tech === 'film' || tech === 'minimal'){
+    const im = x.getImageData(0,0,w,h), d = im.data;
+    const A = fromHex(th.deep), B = fromHex(tech === 'kandinsky' ? th.accent : th.ink);
+    for (let i = 0; i < d.length; i += 4){
+      let r = d[i], g = d[i+1], b = d[i+2]; const L = (0.299*r + 0.587*g + 0.114*b) / 255;
+      if (tech === 'kandinsky'){ const t = clamp((L - 0.18) / 0.6); const tt = t*t*(3-2*t); const k = 0.3 + 0.45*str; r = lerp(r, lerp(A.r, B.r, tt), k); g = lerp(g, lerp(A.g, B.g, tt), k); b = lerp(b, lerp(A.b, B.b, tt), k); r = (r - 128)*1.12 + 128; g = (g - 128)*1.12 + 128; b = (b - 128)*1.12 + 128; }
+      else if (tech === 'film'){ const grey = L*255; r = lerp(r, grey, 0.18)*0.92 + 22; g = lerp(g, grey, 0.18)*0.9 + 16; b = lerp(b, grey, 0.18)*0.8 + 14; }
+      else { const grey = L*255; r = lerp(r, grey, 0.3)*0.94 + 12; g = lerp(g, grey, 0.3)*0.94 + 12; b = lerp(b, grey, 0.3)*0.94 + 12; }
+      d[i] = r; d[i+1] = g; d[i+2] = b;
+    }
+    x.putImageData(im, 0, 0);
+    if (tech === 'film'){ const g = x.createRadialGradient(w/2,h/2,Math.min(w,h)*0.3,w/2,h/2,Math.max(w,h)*0.75); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(20,8,0,.55)'); x.fillStyle = g; x.fillRect(0,0,w,h); }
+  } else if (tech === 'riso'){
+    // фото остаётся основой: постеризация + лёгкий оттенок + полупрозрачный растр поверх
+    const im = x.getImageData(0,0,w,h), d = im.data, lv = 255/7;
+    for (let i = 0; i < d.length; i += 4){
+      const L = (d[i] + d[i+1] + d[i+2]) / 3;
+      for (let k = 0; k < 3; k++){ const v = d[i+k] + (d[i+k] - L)*0.15; d[i+k] = Math.round(clamp(v, 0, 255)/lv)*lv; }
+    }
+    x.putImageData(im, 0, 0);
+    x.globalCompositeOperation = 'soft-light'; x.globalAlpha = 0.22; x.fillStyle = th.accent; x.fillRect(0,0,w,h);
+    const step = 8, dark = th.mode === 'dark';
+    x.globalCompositeOperation = dark ? 'screen' : 'multiply'; x.globalAlpha = 0.14; x.fillStyle = th.accent2;
+    for (let yy = 0; yy < h; yy += step) for (let xx = 0; xx < w; xx += step){
+      const i = ((yy|0)*w + (xx|0))*4, v = (d[i]*0.3 + d[i+1]*0.6 + d[i+2]*0.1) / 255, rad = (dark ? v : 1 - v) * step * 0.5;
+      if (rad > 0.5){ x.beginPath(); x.arc(xx + 2, yy + 2, rad, 0, 7); x.fill(); }
+    }
+    x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+  }
+  return c;
+}
+let grainTiles = null;
+function grain(){ if (grainTiles) return grainTiles; grainTiles = [0,1,2,3].map(() => { const c = makeCanvas(220,220), x = c.getContext('2d'), im = x.createImageData(220,220); for (let i = 0; i < im.data.length; i += 4){ const v = Math.random()*255; im.data[i]=im.data[i+1]=im.data[i+2]=v; im.data[i+3]=255; } x.putImageData(im,0,0); return c; }); return grainTiles; }
+async function prepare(day){
+  const key = day.id + ':' + day.rev; if (prepCache.has(key)) return prepCache.get(key);
+  const v = day.vibe, th = themeFromVibe(v), raw = await photoSources(day);
+  const seed = hashStr(day.id) + (day.seedShift || 0) * 7919;
+  const base = day.art && day.art.length ? await Promise.all(day.art.map(loadImg)) : [genArt(day, th, seed), genArt(day, th, seed + 101)];
+  const photos = base.map((s, i) => processPhoto(s, v.technique, th, seed + i, 1));
+  const p = { th, photos, raw, seed, v }; prepCache.set(key, p); return p;
+}
+
+/* ---------- картина дня ----------
+   Если задан IMAGE_ENDPOINT (например, Supabase Edge Function с моделью генерации изображений),
+   картина запрашивается у ИИ по промпту из вайба дня. Иначе система рисует её сама:
+   сцена по теме записи, палитра из фото и настроения, художественный приём дня. */
+const IMAGE_ENDPOINT = '';
+const TECH_EN = { monet:'impressionist oil painting in the style of Claude Monet, soft visible brushstrokes, diffused light',
+  kandinsky:'abstract geometric composition inspired by Wassily Kandinsky, circles, sharp lines, bold shapes', film:'nostalgic 35mm film photograph, warm grain, light leaks, faded colors',
+  minimal:'japanese minimalist illustration, lots of empty space, calm, muted tones', riso:'risograph print, halftone dots, two-color misregistration, vivid poster colors' };
+const SCENE_EN = { park:'a park with trees', sea:'the seaside, horizon over water', mountains:'mountain ridges', office:'an office at night, city lights through the window, glowing monitor', room:'a cozy room by the window',
+  party:'a festive party with lights and confetti', city:'a city street', field:'an open landscape with soft hills' };
+function imagePrompt(day){
+  const v = day.vibe, T = v.textInfo, th = themeFromVibe(v);
+  return [SCENE_EN[T.scene] || SCENE_EN.field, T.season ? T.season + ' season' : '', T.tod ? T.tod : '', T.weather ? T.weather : '', moodOf(v).label.replace('&', 'and').toLowerCase() + ' mood',
+    TECH_EN[v.technique], 'color palette ' + [th.bg, th.accent, th.accent2, ...v.photo.colors.slice(0, 2)].join(' '), 'no text, no faces'].filter(Boolean).join(', ');
+}
+async function generateAIImage(day){
+  if (!IMAGE_ENDPOINT) return null;
+  const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 90000);
+  try {
+    const r = await fetch(IMAGE_ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:imagePrompt(day)}), signal:ctl.signal});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.image){ console.warn('Генерация картинки не удалась:', j.error || r.status); toast('ИИ-картинка не получилась, картину нарисовала система'); return null; }
+    const im = await loadImg(j.image), k = Math.min(1, 1200 / Math.max(im.naturalWidth, im.naturalHeight)), c = makeCanvas(Math.round(im.naturalWidth*k), Math.round(im.naturalHeight*k));
+    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.82);
+  } catch (e) { console.warn(e); toast('ИИ-картинка не ответила вовремя, картину нарисовала система'); return null; }
+  finally { clearTimeout(tm); }
+}
+function artPalette(v, th){
+  const h = th.hue, s = v.scales, T = v.textInfo;
+  let sky;
+  if (T.tod === 'night') sky = [ok(0.17, 0.05, h + 10), ok(0.3, 0.08, h - 25)];
+  else if (T.tod === 'evening') sky = [ok(0.48, 0.1, mixHue(290, h, 0.45)), ok(0.8, 0.14, mixHue(62, h, 0.35))];
+  else if (T.tod === 'morning') sky = [ok(0.86, 0.05, mixHue(230, h, 0.3)), ok(0.94, 0.06, 85)];
+  else sky = [ok(0.78, 0.08, mixHue(235, h, 0.35)), ok(0.91, 0.05, mixHue(95, h, 0.3))];
+  if (T.weather === 'rain' || T.weather === 'fog'){ sky = sky.map(c => { const o = rgbToOklch(fromHex(c)); return ok(o.L*0.85, o.C*0.35, o.h); }); }
+  if (T.weather === 'snow'){ sky = sky.map(c => { const o = rgbToOklch(fromHex(c)); return ok(Math.min(0.95, o.L + 0.1), o.C*0.4, o.h); }); }
+  const pc = v.photo.colors.map(c => rgbToOklch(fromHex(c)));
+  const leaves = { autumn:[ok(0.8, 0.15, 88), ok(0.68, 0.17, 55), ok(0.58, 0.17, 35)], winter:[ok(0.96, 0.01, 240), ok(0.86, 0.02, 240), ok(0.72, 0.03, 250)],
+    spring:[ok(0.87, 0.08, 350), ok(0.78, 0.13, 140), ok(0.92, 0.06, 10)], summer:[ok(0.72, 0.15, 140), ok(0.62, 0.14, 152), ok(0.82, 0.13, 118)] }[T.season]
+    || pc.slice(0, 3).map(o => ok(clamp(o.L, 0.45, 0.85), Math.max(o.C, 0.06), o.h));
+  while (leaves.length < 3) leaves.push(th.accent);
+  const ground = { autumn: ok(0.45, 0.09, 55), winter: ok(0.9, 0.015, 240), summer: ok(0.55, 0.1, 140), spring: ok(0.6, 0.1, 135) }[T.season] || ok(0.36 + 0.15*s.warmth, 0.05, h);
+  return { sky, leaves, ground, accent: th.accent, accent2: th.accent2, ink: th.ink, deep: th.deep, light: ok(0.93, 0.12, 88), dark: ok(0.22, 0.03, h) };
+}
+function genArt(day, th, seed){
+  const W = 1200, H = 900, c = makeCanvas(W, H), x = c.getContext('2d'), v = day.vibe, T = v.textInfo, p = artPalette(v, th);
+  const R = mulberry32(seed), r = (a, b) => a + R()*(b - a);
+  const grad = (y0, y1, cols) => { const g = x.createLinearGradient(0, y0, 0, y1); cols.forEach((col, i) => g.addColorStop(i / (cols.length - 1), col)); return g; };
+  const glow = (cx, cy, rad, col, a) => { const g = x.createRadialGradient(cx, cy, 0, cx, cy, rad); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); x.globalAlpha = a; x.fillStyle = g; x.fillRect(cx - rad, cy - rad, rad*2, rad*2); x.globalAlpha = 1; };
+  const night = T.tod === 'night', evening = T.tod === 'evening';
+  x.fillStyle = grad(0, H, p.sky); x.fillRect(0, 0, W, H);
+  const sunX = r(250, 950), sunY = evening ? r(380, 470) : r(110, 220);
+  if (night){ for (let i = 0; i < 160; i++){ x.fillStyle = `rgba(255,255,240,${r(0.2, 0.9)})`; x.fillRect(r(0, W), r(0, H*0.55), 2, 2); } glow(sunX, sunY, 140, p.light, 0.35); x.fillStyle = ok(0.95, 0.03, 90); x.beginPath(); x.arc(sunX, sunY, 38, 0, 7); x.fill(); }
+  else if (!T.weather){ glow(sunX, sunY, evening ? 360 : 240, p.light, 0.6); x.fillStyle = evening ? ok(0.86, 0.15, 65) : ok(0.97, 0.06, 95); x.beginPath(); x.arc(sunX, sunY, evening ? 70 : 46, 0, 7); x.fill(); }
+  const hills = (y, amp, col, n = 3) => { x.fillStyle = col; x.beginPath(); x.moveTo(0, H); for (let i = 0; i <= 24; i++){ const xx = i / 24 * W; x.lineTo(xx, y + Math.sin(i / 24 * Math.PI * n + seed) * amp + Math.sin(i*1.7 + seed) * amp*0.3); } x.lineTo(W, H); x.fill(); };
+  const scene = T.scene;
+  if (scene === 'park' || scene === 'field'){
+    hills(560, 30, p.leaves[2]); hills(640, 24, p.ground, 2);
+    if (scene === 'park'){
+      x.fillStyle = 'rgba(255,240,215,.28)'; x.beginPath(); x.moveTo(W*0.42, H); x.quadraticCurveTo(W*0.5, 720, W*0.49, 640); x.lineTo(W*0.53, 640); x.quadraticCurveTo(W*0.6, 740, W*0.68, H); x.fill();
+      const trees = 7 + (R()*3|0);
+      for (let i = 0; i < trees; i++){
+        const tx = (i + 0.5) / trees * W + r(-40, 40), base = r(660, 760), top = r(240, 380), w = r(14, 26);
+        x.fillStyle = p.dark; x.beginPath(); x.moveTo(tx - w/2, base); x.lineTo(tx - w*0.15, top); x.lineTo(tx + w*0.15, top); x.lineTo(tx + w/2, base); x.fill();
+        if (T.season === 'winter'){ x.strokeStyle = p.dark; x.lineWidth = 3; for (let b = 0; b < 6; b++){ const by = r(top, base - 120); x.beginPath(); x.moveTo(tx, by); x.lineTo(tx + r(-90, 90), by - r(40, 90)); x.stroke(); } }
+        else for (let k = 0; k < 140; k++){ x.fillStyle = p.leaves[k % 3]; x.globalAlpha = r(0.55, 0.95); x.beginPath(); x.arc(tx + r(-110, 110)*R(), top + r(-90, 70), r(6, 22), 0, 7); x.fill(); }
+        x.globalAlpha = 1;
+      }
+      if (T.season === 'autumn') for (let i = 0; i < 260; i++){ x.fillStyle = p.leaves[i % 3]; x.beginPath(); x.ellipse(r(0, W), r(620, H), r(4, 10), r(2, 5), r(0, 3), 0, 7); x.fill(); }
+    } else { for (let i = 0; i < 120; i++){ x.fillStyle = p.leaves[i % 3]; x.globalAlpha = r(0.4, 0.8); x.beginPath(); x.arc(r(0, W), r(640, H), r(3, 9), 0, 7); x.fill(); } x.globalAlpha = 1; }
+  } else if (scene === 'sea'){
+    const hz = 470; const sea = grad(hz, 760, [ok(0.55, 0.1, 225), ok(0.35, 0.09, 235)]); x.fillStyle = sea; x.fillRect(0, hz, W, 300);
+    x.strokeStyle = 'rgba(255,255,255,.35)'; x.lineWidth = 2; for (let i = 0; i < 40; i++){ const yy = r(hz + 10, 750), xx = r(0, W); x.beginPath(); x.moveTo(xx, yy); x.quadraticCurveTo(xx + 20, yy - 5, xx + 40 + r(0, 40), yy); x.stroke(); }
+    if (!T.weather) for (let i = 0; i < 30; i++){ x.fillStyle = 'rgba(255,240,200,.55)'; x.fillRect(sunX - r(10, 60), r(hz + 6, 740), r(20, 90), 3); }
+    x.fillStyle = ok(0.84, 0.07, 82); x.beginPath(); x.moveTo(0, 740); x.quadraticCurveTo(W*0.5, 700, W, 760); x.lineTo(W, H); x.lineTo(0, H); x.fill();
+  } else if (scene === 'mountains'){
+    hills(380, 90, ok(0.62, 0.04, 260), 2); if (T.season === 'winter' || T.weather === 'snow'){ x.fillStyle = 'rgba(255,255,255,.75)'; x.fillRect(0, 300, W, 0); }
+    hills(500, 70, ok(0.46, 0.05, 250), 3); hills(640, 40, p.ground, 2);
+  } else if (scene === 'city' || scene === 'office'){
+    const lit = night || evening;
+    for (let b = 0; b < 12; b++){ const bx = b*100 + r(-10, 10), bh = r(200, 520), by = 700 - bh; x.fillStyle = ok(lit ? 0.22 : 0.5, 0.03, th.hue); x.fillRect(bx, by, 92, bh);
+      for (let wy = by + 14; wy < 690; wy += 24) for (let wx = bx + 8; wx < bx + 84; wx += 16) if (R() < (lit ? 0.4 : 0.15)){ x.fillStyle = lit ? 'rgba(255,205,120,.85)' : 'rgba(255,255,255,.35)'; x.fillRect(wx, wy, 8, 12); } }
+    x.fillStyle = ok(0.18, 0.02, th.hue); x.fillRect(0, 700, W, 200);
+    if (scene === 'office'){
+      x.fillStyle = ok(0.13, 0.03, th.hue); x.fillRect(0, 0, W, 60); x.fillRect(0, 0, 60, H); x.fillRect(W - 60, 0, 60, H); x.fillRect(W/2 - 12, 0, 24, 700); x.fillRect(0, 690, W, 210);
+      glow(600, 600, 380, p.accent, 0.45); x.fillStyle = ok(0.82, 0.1, th.hue); x.fillRect(400, 470, 400, 230); x.fillStyle = ok(0.3, 0.05, th.hue); for (let l = 0; l < 7; l++) x.fillRect(430, 500 + l*26, r(120, 340), 9);
+      x.fillStyle = ok(0.1, 0.02, th.hue); x.fillRect(570, 700, 60, 50); x.fillRect(460, 750, 280, 14); x.fillStyle = ok(0.9, 0.02, 80); x.fillRect(880, 700, 70, 60);
+    } else { x.strokeStyle = 'rgba(255,220,150,.5)'; x.lineWidth = 3; for (let i = 0; i < 8; i++){ const lx = 80 + i*150; x.beginPath(); x.moveTo(lx, 700); x.lineTo(lx, 600); x.stroke(); glow(lx, 600, 50, '#ffd890', lit ? 0.7 : 0.2); } }
+  } else if (scene === 'room'){
+    const wall = night || evening ? ok(0.3, 0.04, th.hue) : ok(0.82, 0.03, th.hue); x.fillStyle = wall; x.fillRect(0, 0, W, H);
+    const wx = 300, wy = 120, ww = 600, wh = 480; x.fillStyle = grad(wy, wy + wh, p.sky); x.fillRect(wx, wy, ww, wh);
+    if (night){ glow(wx + 420, wy + 120, 80, p.light, 0.5); } else if (!T.weather) glow(wx + 420, wy + 130, 160, p.light, 0.6);
+    x.fillStyle = ok(0.42, 0.04, th.hue); for (let b = 0; b < 6; b++){ const bx = wx + b*100, bh = r(80, 200); x.fillRect(bx, wy + wh - bh, 90, bh); }
+    x.strokeStyle = ok(0.2, 0.02, th.hue); x.lineWidth = 18; x.strokeRect(wx, wy, ww, wh); x.lineWidth = 10; x.beginPath(); x.moveTo(wx + ww/2, wy); x.lineTo(wx + ww/2, wy + wh); x.moveTo(wx, wy + wh/2); x.lineTo(wx + ww, wy + wh/2); x.stroke();
+    x.fillStyle = ok(0.5, 0.05, 60); x.fillRect(wx - 40, wy + wh + 10, ww + 80, 26);
+    x.fillStyle = p.accent; x.fillRect(wx + 60, wy + wh - 60, 60, 70); x.fillStyle = ok(0.55, 0.12, 145); for (let k = 0; k < 9; k++){ x.beginPath(); x.ellipse(wx + 520 + r(-30, 30), wy + wh - 70 + r(-40, 10), 10, 30, r(-1, 1), 0, 7); x.fill(); } x.fillStyle = ok(0.5, 0.08, 40); x.fillRect(wx + 500, wy + wh - 40, 40, 50);
+    if (night || evening) glow(170, 300, 260, p.light, 0.45);
+    if (T.scene === 'room' && (v.textInfo.hits.warm.length)) { x.strokeStyle = 'rgba(255,255,255,.6)'; x.lineWidth = 3; for (let k = 0; k < 3; k++){ x.beginPath(); x.moveTo(wx + 80 + k*14, wy + wh - 70); x.bezierCurveTo(wx + 60 + k*14, wy + wh - 110, wx + 110 + k*14, wy + wh - 130, wx + 85 + k*14, wy + wh - 170); x.stroke(); } }
+  } else if (scene === 'party'){
+    x.fillStyle = grad(0, H, [ok(0.17, 0.07, th.hue), ok(0.26, 0.1, th.hue + 30)]); x.fillRect(0, 0, W, H);
+    const cols = [p.accent, p.accent2, ok(0.85, 0.15, 95), ok(0.72, 0.16, 350), ok(0.8, 0.12, 190)];
+    for (let i = 0; i < 46; i++) glow(r(0, W), r(0, H), r(30, 110), cols[i % 5], 0.55);
+    x.strokeStyle = 'rgba(255,240,200,.6)'; x.lineWidth = 2; x.beginPath(); x.moveTo(0, 120); x.quadraticCurveTo(600, 260, W, 110); x.stroke();
+    for (let i = 0; i < 24; i++) glow(i*52, 120 + Math.sin(i/24*Math.PI)*120, 18, '#fff3c0', 0.95);
+    for (let i = 0; i < 520; i++){ x.save(); x.translate(r(0, W), r(0, H)); x.rotate(r(0, 6.28)); x.fillStyle = cols[i % 5]; x.fillRect(-5, -2.5, r(8, 14), r(4, 6)); x.restore(); }
+  }
+  if (T.weather === 'rain'){ x.strokeStyle = 'rgba(230,236,240,.4)'; x.lineWidth = 1.5; for (let i = 0; i < 650; i++){ const sx = r(0, W), sy = r(0, H); x.beginPath(); x.moveTo(sx, sy); x.lineTo(sx - 6, sy + r(18, 40)); x.stroke(); } }
+  if (T.weather === 'snow' || T.season === 'winter'){ for (let i = 0; i < 700; i++){ x.fillStyle = 'rgba(255,255,255,.9)'; x.beginPath(); x.arc(r(0, W), r(0, H), r(1, 4.5), 0, 7); x.fill(); } }
+  if (T.weather === 'fog'){ x.fillStyle = grad(300, H, ['rgba(235,235,240,0)', 'rgba(235,235,240,.7)']); x.fillRect(0, 300, W, H); }
+  return c;
+}
+
+/* ---------- саундтрек дня (Web Audio) ----------
+   Играет всегда, даже там, где плееры Spotify и YouTube недоступны: темп и лад берутся из песни дня,
+   тембр и плотность — из настроения, фактура (дождь, плёнка) — из сцены и приёма. */
+let AC = null, BUS = null, SOUND = null;
+function audioCtx(){ if (!AC){ AC = new (window.AudioContext || window.webkitAudioContext)(); BUS = AC.createGain(); BUS.connect(AC.destination); } return AC; }
+function noiseBuf(ac){ const b = ac.createBuffer(1, ac.sampleRate*2, ac.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random()*2 - 1; return b; }
+const midiHz = m => 440 * Math.pow(2, (m - 69) / 12);
+function stopSoundtrack(){ if (SOUND){ SOUND.stop(); SOUND = null; } }
+function startSoundtrack(day){
+  stopSoundtrack(); const ac = audioCtx(); ac.resume();
+  const v = day.vibe, s = v.scales, bpm = v.music.bpm, beat = 60 / bpm, tech = v.technique, T = v.textInfo;
+  const minor = v.music.minor === true || (v.music.minor == null && (s.sadness > 0.2 || s.warmth < 0.42 || s.tension > 0.6));
+  const th = themeFromVibe(v), root = 45 + Math.round(th.hue / 30) % 12;
+  const scale = minor ? [0,2,3,5,7,8,10] : [0,2,4,5,7,9,11], prog = minor ? [0,5,2,6] : [0,5,3,4];
+  const deg = d => scale[((d % 7) + 7) % 7] + 12*Math.floor(d / 7);
+  const chord = i => { const d = prog[i % 4]; return [deg(d), deg(d + 2), deg(d + 4)].map(n => root + n); };
+  const master = ac.createGain(); master.gain.setValueAtTime(0, ac.currentTime); master.gain.linearRampToValueAtTime(0.55, ac.currentTime + 2);
+  const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 700 + s.energy*3800; lp.connect(master);
+  const dl = ac.createDelay(1.5), fb = ac.createGain(), wet = ac.createGain(); dl.delayTime.value = beat*0.75; fb.gain.value = 0.32; wet.gain.value = 0.28;
+  lp.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(wet); wet.connect(master); master.connect(BUS);
+  const nb = noiseBuf(ac), extra = [];
+  const tone = (f, t0, dur, type, g, att = 0.02, out = lp) => { const o = ac.createOscillator(), e = ac.createGain(); o.type = type; o.frequency.value = f; e.gain.setValueAtTime(0, t0); e.gain.linearRampToValueAtTime(g, t0 + att); e.gain.exponentialRampToValueAtTime(0.0001, t0 + dur); o.connect(e); e.connect(out); o.start(t0); o.stop(t0 + dur + 0.05); };
+  const kick = t0 => { const o = ac.createOscillator(), e = ac.createGain(); o.frequency.setValueAtTime(120, t0); o.frequency.exponentialRampToValueAtTime(42, t0 + 0.25); e.gain.setValueAtTime(0.5, t0); e.gain.exponentialRampToValueAtTime(0.001, t0 + 0.3); o.connect(e); e.connect(master); o.start(t0); o.stop(t0 + 0.32); };
+  const hat = t0 => { const n = ac.createBufferSource(), f = ac.createBiquadFilter(), e = ac.createGain(); n.buffer = nb; f.type = 'highpass'; f.frequency.value = 7000; e.gain.setValueAtTime(0.06, t0); e.gain.exponentialRampToValueAtTime(0.001, t0 + 0.06); n.connect(f); f.connect(e); e.connect(master); n.start(t0, Math.random()); n.stop(t0 + 0.08); };
+  if (T.weather === 'rain' || T.weather === 'snow' || tech === 'minimal'){ const n = ac.createBufferSource(), f = ac.createBiquadFilter(), e = ac.createGain(); n.buffer = nb; n.loop = true; f.type = T.weather === 'rain' ? 'bandpass' : 'lowpass'; f.frequency.value = T.weather === 'rain' ? 1400 : 500; e.gain.value = T.weather === 'rain' ? 0.06 : 0.03; n.connect(f); f.connect(e); e.connect(master); n.start(); extra.push(n); }
+  let step = 0, next = ac.currentTime + 0.1; const pluck = tech === 'kandinsky' ? 'square' : tech === 'riso' ? 'sawtooth' : 'triangle';
+  const tick = () => {
+    while (next < ac.currentTime + 0.25){
+      const bar = Math.floor(step / 8), ci = Math.floor(bar / 2), ch = chord(ci);
+      if (step % 16 === 0) ch.forEach((n, i) => { tone(midiHz(n + 12), next, beat*8.2, 'triangle', 0.05, 1.2); tone(midiHz(n + 12)*1.004, next, beat*8.2, 'sine', 0.04, 1.4); if (i === 0) tone(midiHz(n), next, beat*8, 'sine', 0.07, 0.6); });
+      const eighth = step % 2 === 0;
+      if (s.energy > 0.28 && (s.energy > 0.5 || eighth)){ const n = ch[(step * 2 + (step >> 2)) % 3] + (step % 4 === 3 ? 24 : 12); tone(midiHz(n), next, beat*(s.energy > 0.5 ? 0.45 : 0.9), pluck, pluck === 'triangle' ? 0.07 : 0.025); }
+      if (s.energy > 0.62 && eighth) kick(next);
+      if (s.energy > 0.7 && !eighth) hat(next);
+      if (tech === 'film' && Math.random() < 0.3){ const n = ac.createBufferSource(), e = ac.createGain(); n.buffer = nb; e.gain.value = 0.04; n.connect(e); e.connect(master); n.start(next + Math.random()*beat/2, Math.random(), 0.004); }
+      next += beat / 2; step++;
+    }
+  };
+  tick(); const iv = setInterval(tick, 40);
+  SOUND = { stop(){ clearInterval(iv); const t = ac.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0, t + 0.6); setTimeout(() => { extra.forEach(n => { try { n.stop(); } catch {} }); master.disconnect(); }, 800); }, day: day.id };
+  return SOUND;
+}
+function duck(on){ if (!BUS) return; const t = AC.currentTime; BUS.gain.cancelScheduledValues(t); BUS.gain.setValueAtTime(BUS.gain.value, t); BUS.gain.linearRampToValueAtTime(on ? 0.3 : 1, t + 0.4); }
+
+/* ---------- озвучка ---------- */
+function ruVoices(){ return ('speechSynthesis' in window) ? speechSynthesis.getVoices().filter(v => (v.lang || '').toLowerCase().startsWith('ru')) : []; }
+function pickVoice(){
+  const vs = ruVoices(); let saved = null; try { saved = localStorage.getItem('aftertone.voice'); } catch {}
+  return vs.find(v => v.name === saved) || vs.find(v => /natural|online|neural/i.test(v.name)) || vs.find(v => /google/i.test(v.name)) || vs.find(v => /milena|katya|svetlana|dariya|irina/i.test(v.name)) || vs[0] || null;
+}
+function speak(day, onState){
+  if (!('speechSynthesis' in window)){ toast('Браузер не поддерживает синтез речи'); return; }
+  if (speechSynthesis.speaking){ speechSynthesis.cancel(); duck(false); onState(false); return; }
+  const u = new SpeechSynthesisUtterance(day.description || day.text), voice = pickVoice();
+  if (voice) u.voice = voice; u.lang = 'ru-RU'; u.rate = Math.min(1.1, day.vibe.voice.rate * 0.92); u.pitch = day.vibe.voice.pitch;
+  u.onend = u.onerror = () => { duck(false); onState(false); };
+  duck(true); speechSynthesis.speak(u); onState(true);
+}
+
+/* ---------- отрисовка ---------- */
+function drawCover(x, img, ax, ay, aw, ah, scale, px, py){
+  const iw = img.width, ih = img.height, s = Math.max(aw/iw, ah/ih) * scale, w = iw*s, h = ih*s;
+  x.drawImage(img, ax + (aw - w)/2 + px*(w - aw)/2, ay + (ah - h)/2 + py*(h - ah)/2, w, h);
+}
+function drawPhotoLayer(x, day, P, t, ax, ay, aw, ah){
+  const v = P.v, th = P.th, n = P.photos.length, dur = v.frameDur, R = mulberry32(P.seed);
+  const idx = Math.floor(t / dur) % n, p = (t % dur) / dur, next = (idx + 1) % n;
+  const fadeDur = v.cut === 'cut' ? 0.12 : 0.9, fadeP = clamp((t % dur - (dur - fadeDur)) / fadeDur);
+  x.save(); x.beginPath(); x.rect(ax, ay, aw, ah); x.clip();
+  x.fillStyle = th.bg; x.fillRect(ax, ay, aw, ah);
+  let bx = ax, by = ay, bw = aw, bh = ah;
+  if (v.technique === 'minimal'){ bw = aw*0.58; bh = bw*0.78; bx = ax + (aw - bw)/2; by = ay + ah*0.2; }
+  else { const inset = v.air * 34; bx += inset; by += inset; bw -= inset*2; bh -= inset*2; }
+  const kb = (i, pp) => { const dir = (i % 2 ? -1 : 1); return [1.04 + 0.07*pp, dir*(pp - 0.5)*0.8, (i % 3 - 1)*0.3]; };
+  x.save(); x.beginPath(); x.rect(bx, by, bw, bh); x.clip();
+  const [s1, px1, py1] = kb(idx, p); drawCover(x, P.photos[idx], bx, by, bw, bh, s1, px1, py1);
+  if (fadeP > 0 && n > 1){ x.globalAlpha = fadeP; const [s2, px2, py2] = kb(next, 0); drawCover(x, P.photos[next], bx, by, bw, bh, s2, px2, py2); x.globalAlpha = 1; }
+  x.restore();
+  const beat = t * (v.music.bpm / 60), pulse = 1 + 0.05*Math.pow(1 - (beat % 1), 3);
+  if (v.technique === 'kandinsky'){
+    const cx = ax + aw*(0.78 + R()*0.1), cy = ay + ah*(0.14 + R()*0.1), rr = aw*0.07;
+    x.fillStyle = th.accent3; x.globalAlpha = 0.55; x.beginPath(); x.arc(cx, cy, rr*pulse, 0, 7); x.fill(); x.globalAlpha = 1;
+    x.strokeStyle = th.ink; x.lineWidth = 3; x.beginPath(); x.arc(cx, cy, rr*1.45, 0, 7); x.stroke();
+    x.lineWidth = 1.5; x.globalAlpha = 0.6; for (let i = 0; i < 3; i++){ const a = R()*Math.PI + t*0.04*(i % 2 ? 1 : -1); const mx = ax + aw*R(), my = ay + ah*R(); x.beginPath(); x.moveTo(mx - Math.cos(a)*aw, my - Math.sin(a)*aw); x.lineTo(mx + Math.cos(a)*aw, my + Math.sin(a)*aw); x.stroke(); }
+    x.globalAlpha = 1; const tx = ax + aw*(0.08 + R()*0.12), ty = ay + ah*(0.72 + R()*0.12), ts = aw*0.09;
+    x.fillStyle = th.accent2; x.globalAlpha = 0.5; x.save(); x.translate(tx, ty); x.rotate(0.3 + Math.sin(t*0.5)*0.05); x.beginPath(); x.moveTo(0, -ts); x.lineTo(ts*0.9, ts*0.6); x.lineTo(-ts*0.9, ts*0.6); x.fill(); x.restore(); x.globalAlpha = 1;
+    x.fillStyle = th.ink; for (let i = 0; i < 6; i++) for (let j = 0; j < 2; j++) if ((i + j) % 2) x.fillRect(ax + aw*0.08 + i*16, ay + ah*0.1 + j*16, 16, 16);
+  } else if (v.technique === 'riso'){
+    x.globalCompositeOperation = th.mode === 'dark' ? 'screen' : 'multiply';
+    for (let i = 0; i < 3; i++){ const r0 = aw*(0.05 + R()*0.05); x.fillStyle = i % 2 ? th.accent : th.accent2; x.globalAlpha = 0.3;
+      x.beginPath(); x.arc(ax + aw*R() + Math.sin(t*0.6 + i)*20, ay + ah*R() + Math.cos(t*0.5 + i)*16, r0*pulse, 0, 7); x.fill(); }
+    x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+  } else if (v.technique === 'film'){
+    const lx = ax + aw*(0.5 + 0.5*Math.sin(t*0.25)); const g = x.createLinearGradient(lx - aw*0.5, 0, lx + aw*0.3, 0);
+    g.addColorStop(0, 'rgba(255,120,40,0)'); g.addColorStop(0.5, 'rgba(255,140,60,.22)'); g.addColorStop(1, 'rgba(255,200,120,0)'); x.fillStyle = g; x.fillRect(ax, ay, aw, ah);
+    x.strokeStyle = th.ink; x.globalAlpha = 0.5; x.lineWidth = 1; x.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1); x.globalAlpha = 1;
+  } else if (v.technique === 'monet'){
+    for (let i = 0; i < 10; i++){ const sx = ax + aw*R() + Math.sin(t*0.3 + i)*14, sy = ay + ah*R() + Math.cos(t*0.25 + i)*10, rr = aw*(0.04 + R()*0.06);
+      const g = x.createRadialGradient(sx, sy, 0, sx, sy, rr); g.addColorStop(0, 'rgba(255,244,214,.22)'); g.addColorStop(1, 'rgba(255,244,214,0)'); x.fillStyle = g; x.fillRect(sx - rr, sy - rr, rr*2, rr*2); }
+  } else if (v.technique === 'minimal'){
+    x.fillStyle = th.accent; x.beginPath(); x.arc(ax + aw*0.76, ay + ah*0.13, aw*0.045, 0, 7); x.fill();
+    x.strokeStyle = th.muted; x.lineWidth = 1.5; x.beginPath(); x.moveTo(ax + aw*0.1, by + bh + ah*0.1); x.lineTo(ax + aw*0.9, by + bh + ah*0.1); x.stroke();
+  }
+  if (P.raw && P.raw.length && !P.noPolaroid){
+    const ph = P.raw[Math.floor(t / (dur*1.5)) % P.raw.length], pw = aw*0.26, phh = pw*1.16, m = pw*0.06;
+    x.save(); x.translate(ax + aw - pw*0.62 - aw*0.03, ay + ah - phh*0.6 - ah*0.04); x.rotate((R() - 0.5)*0.16);
+    x.fillStyle = 'rgba(0,0,0,.28)'; x.fillRect(-pw/2 + 6, -phh/2 + 8, pw, phh);
+    x.fillStyle = '#f5f2ea'; x.fillRect(-pw/2, -phh/2, pw, phh);
+    x.save(); x.beginPath(); x.rect(-pw/2 + m, -phh/2 + m, pw - 2*m, pw - 2*m); x.clip(); drawCover(x, ph, -pw/2 + m, -phh/2 + m, pw - 2*m, pw - 2*m, 1, 0, 0); x.restore();
+    x.restore();
+  }
+  x.restore();
+}
+function drawGrain(x, P, t, W, H){
+  const tiles = grain(), tile = tiles[Math.floor(t*12) % tiles.length];
+  x.save(); x.globalAlpha = P.th.grain; x.globalCompositeOperation = P.th.mode === 'dark' ? 'screen' : 'multiply';
+  const pat = x.createPattern(tile, 'repeat'); x.fillStyle = pat; x.translate((t*37) % 220, (t*53) % 220); x.fillRect(-220, -220, W + 440, H + 440); x.restore();
+}
+function wrap(x, text, maxW){ const words = text.split(' '); const lines = []; let line = ''; for (const w of words){ const test = line ? line + ' ' + w : w; if (x.measureText(test).width > maxW && line){ lines.push(line); line = w; } else line = test; } if (line) lines.push(line); return lines; }
+function drawPoster(x, day, P, t){
+  const W = 1080, H = 1350, th = P.th, v = P.v;
+  x.fillStyle = th.bg; x.fillRect(0, 0, W, H);
+  x.fillStyle = th.muted; x.font = '500 22px Inter, sans-serif'; x.textBaseline = 'alphabetic'; try { x.letterSpacing = '3px'; } catch {}
+  x.textAlign = 'left'; x.fillText(fmtDate(day.date), 64, 84);
+  x.textAlign = 'center'; x.font = '700 22px Montserrat, sans-serif'; x.fillText('AFTERTONE', W/2, 84); x.font = '500 22px Inter, sans-serif';
+  x.textAlign = 'right'; x.fillText('№ ' + dayNum(day), W - 64, 84);
+  x.strokeStyle = th.line; x.lineWidth = 2; x.beginPath(); x.moveTo(64, 108); x.lineTo(W - 64, 108); x.stroke();
+  drawPhotoLayer(x, day, P, t, 64, 136, 952, 760);
+  try { x.letterSpacing = '0px'; } catch {}
+  x.textAlign = 'left'; x.fillStyle = th.ink;
+  let size = 76, lines;
+  do { x.font = `700 ${size}px Montserrat, sans-serif`; lines = wrap(x, day.title, 952); size -= 6; } while (lines.length > 2 && size > 46);
+  size += 6; let y = 972;
+  for (const l of lines){ x.fillText(l, 62, y); y += size*1.12; }
+  x.fillStyle = th.accent; x.font = '500 42px Caveat, cursive';
+  wrap(x, day.caption, 952).slice(0, 2).forEach((l, i) => x.fillText(l, 64, y + 18 + i*44));
+  x.fillStyle = th.muted; x.font = '500 21px Inter, sans-serif';
+  x.strokeStyle = th.line; x.beginPath(); x.moveTo(64, 1262); x.lineTo(W - 64, 1262); x.stroke();
+  const mus = (day.music.label || 'песня').slice(0, 38);
+  x.fillText(`♪ ${mus} · ${v.music.bpm} bpm`, 64, 1298);
+  x.textAlign = 'right'; x.fillText(`${TECH[v.technique].name} · ${TECH[v.technique].what}`, W - 64, 1298);
+  drawGrain(x, P, t, W, H);
+}
+
+/* ---------- миниатюры и циклы анимации ---------- */
+const thumbCache = new Map();
+async function thumb(day){
+  const key = day.id + ':' + day.rev; if (thumbCache.has(key)) return thumbCache.get(key);
+  const P = await prepare(day); const c = makeCanvas(432, 540), x = c.getContext('2d'); x.scale(0.4, 0.4);
+  drawPoster(x, day, P, P.v.frameDur*0.35); const url = c.toDataURL('image/jpeg', 0.86); thumbCache.set(key, url); return url;
+}
+let stops = [];
+function loop(fn){ let id, st = performance.now(), alive = true; const tick = n => { if (!alive) return; fn(Math.max(0, (n - st)/1000)); id = requestAnimationFrame(tick); }; id = requestAnimationFrame(tick); stops.push(() => { alive = false; cancelAnimationFrame(id); }); }
+function stopAll(){ stops.forEach(f => f()); stops = []; if (window.speechSynthesis) speechSynthesis.cancel(); stopSoundtrack(); duck(false); }
+
+/* ---------- голос ---------- */
+
+
+
+const app = $('#app');
+
+/* ---------- настроение словами ---------- */
+function moodOf(v){
+  const s = v.scales, T = v.textInfo || {};
+  if (s.tension > 0.6) return {label:'Напряжение & Собранность', short:'Напряжение', icon:'bolt'};
+  if (s.energy > 0.65 && s.warmth > 0.5) return {label:'Радость & Драйв', short:'Радость', icon:'celebration'};
+  if (T.nostalgia) return {label:'Ностальгия & Спокойствие', short:'Ностальгия', icon:'history'};
+  if (s.sadness > 0.25) return {label:'Грусть & Тишина', short:'Грусть', icon:'rainy'};
+  if (s.energy < 0.42 && s.warmth > 0.55) return {label:'Тепло & Спокойствие', short:'Тепло', icon:'wb_twilight'};
+  if (s.energy < 0.42) return {label:'Тишина & Задумчивость', short:'Тишина', icon:'cloud'};
+  return {label:'Вдохновение & Лёгкость', short:'Вдохновение', icon:'auto_awesome'};
+}
+const energyWord = e => e < 0.38 ? 'Низкая (созерцательная)' : e < 0.65 ? 'Средняя' : 'Высокая (драйв)';
+const tempWord = w => { const n = Math.round((w - 0.5) * 60); return Math.abs(n) < 4 ? 'Нейтральная' : n > 0 ? `Тёплая (+${n}°)` : `Холодная (−${-n}°)`; };
+const WEEK = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+const MONTHS_PREP = ['январе','феврале','марте','апреле','мае','июне','июле','августе','сентябре','октябре','ноябре','декабре'];
+const shortDate = d => { const [, m, dd] = d.split('-').map(Number); return `${dd} ${MONTHS[m-1].slice(0,3)}`; };
+const ms = (n, f) => `<span class="ms${f ? ' f' : ''}">${n}</span>`;
+
+/* ---------- миниатюры ---------- */
+const photoThumbCache = new Map();
+async function photoThumb(day){
+  const key = day.id + ':' + day.rev; if (photoThumbCache.has(key)) return photoThumbCache.get(key);
+  const P = await prepare(day); const c = makeCanvas(640, 400), x = c.getContext('2d');
+  drawPhotoLayer(x, day, P, 0.5, 0, 0, 640, 400); const url = c.toDataURL('image/jpeg', 0.84); photoThumbCache.set(key, url); return url;
+}
+async function fillThumbs(root = document){
+  for (const img of $$('img[data-thumb]', root)){ const d = DAYS.find(x => x.id === img.dataset.thumb); if (d) img.src = await thumb(d); }
+  for (const img of $$('img[data-photo]', root)){ const d = DAYS.find(x => x.id === img.dataset.photo); if (d) img.src = await photoThumb(d); }
+}
+
+/* ---------- шапка и меню ---------- */
+function setTab(r){ $$('.tabs a').forEach(a => a.classList.toggle('on', a.dataset.r === r)); }
+function topBrand(){
+  $('#top').innerHTML = `<span class="brand">AFTERTONE</span><div><button class="ibtn" id="me" aria-label="О прототипе">${ms('person')}</button></div>`;
+  $('#me').onclick = () => {
+    const ex = $('.sheet'); if (ex){ ex.remove(); return; }
+    const s = document.createElement('div'); s.className = 'sheet';
+    s.innerHTML = `<div class="h-sm" style="margin-bottom:6px">Прототип Genesis Hack</div>Дни и капсулы хранятся в этом браузере. В рабочей версии — Supabase.<button class="btn sec sm" id="reset">Вернуть демо-дни</button>`;
+    $('#top').appendChild(s);
+    $('#reset').onclick = async e => { const b = e.currentTarget; if (!b.dataset.sure){ b.dataset.sure = 1; b.textContent = 'Свои записи удалятся. Нажми ещё раз'; return; }
+      prepCache.clear(); thumbCache.clear(); photoThumbCache.clear(); await seedDemo(); seedCapsules(true); s.remove(); go('#/'); };
+  };
+}
+function topBack(href, title, right = ''){
+  $('#top').innerHTML = `<a class="l" href="${href}">${ms('arrow_back_ios_new')}<span>${esc(title)}</span></a><div style="display:flex;gap:4px">${right}</div>`;
+}
+function busy(text){ const b = document.createElement('div'); b.className = 'busy'; b.innerHTML = `<div class="ring"></div><div class="h-md" id="busyT">${esc(text)}</div><div class="lb-sm up mut">собираю воспоминание дня</div>`; document.body.appendChild(b); return { say: t => { $('#busyT').textContent = t; }, done: () => b.remove() }; }
+
+/* ---------- главная ---------- */
+async function viewHome(){
+  setTab('home'); topBrand();
+  const d = latest(); const P = await prepare(d); applyTheme(d);
+  const now = new Date(), h = now.getHours();
+  const greet = h < 5 ? 'Доброй ночи' : h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер';
+  const mood = moodOf(d.vibe), R = mulberry32(hashStr(d.id));
+  const bars = Array.from({length: 9}, () => `<i style="height:${Math.round(6 + R()*18*(0.5 + d.vibe.scales.energy))}px;opacity:${(0.35 + R()*0.65).toFixed(2)}"></i>`).join('');
+  const last14 = sorted().slice(-14), counts = {};
+  for (const x of last14){ const m = moodOf(x.vibe); counts[m.short] = counts[m.short] || {n:0, icon:m.icon}; counts[m.short].n++; }
+  const top3 = Object.entries(counts).sort((a,b) => b[1].n - a[1].n).slice(0, 3);
+  const pills = top3.map(([k, o], i) => { const pct = Math.round(o.n / last14.length * 100); return `<div class="mood"><div class="row">${ms(o.icon)}<span class="lb-sm ${i ? 'mut' : 'pri'}" style="letter-spacing:0">${pct}%</span></div><span class="lb-md ${i ? 'mut' : 'pri'}" style="margin-top:4px">${k}</span><div class="bar"><i style="width:${pct}%;${i ? 'opacity:.55' : ''}"></i></div></div>`; }).join('');
+  const w7 = sorted().slice(-7), pts = w7.map((x, i) => [w7.length > 1 ? i / (w7.length - 1) * 320 : 160, 70 - x.vibe.scales.energy * 58]);
+  let path = `M${pts[0][0]},${pts[0][1]}`; for (let i = 1; i < pts.length; i++){ const [x0, y0] = pts[i-1], [x1, y1] = pts[i], dx = (x1 - x0) / 2; path += ` C${x0 + dx},${y0} ${x1 - dx},${y1} ${x1},${y1}`; }
+  const lastP = pts.at(-1), delta = w7.length > 1 ? Math.round((w7.at(-1).vibe.scales.energy - w7.at(-2).vibe.scales.energy) * 100) : 0;
+  const recent = sorted().reverse().slice(1, 5);
+  app.innerHTML = `<div class="stack fade-in">
+    <section><div class="row"><span class="lb-sm up mut">${WEEK[now.getDay()]}, ${now.getDate()} ${MONTHS[now.getMonth()]}</span><span class="pill"><span class="dot"></span>Вайб дня</span></div>
+      <h1 class="h-dl" style="margin-top:8px">${greet}</h1><p class="b-md" style="margin-top:4px">Ваши дни, сохранённые по чувствам</p></section>
+    <a class="card capture" href="#/new"><div style="min-width:0"><div class="row" style="justify-content:flex-start;gap:8px"><span class="ms f pri" style="font-size:18px">edit_note</span><span class="lb-md up" style="color:var(--onv);letter-spacing:.06em">Вечерняя запись</span></div>
+      <h2 class="h-sm" style="margin:6px 0 2px">Запечатлеть сегодняшний день</h2><p class="b-sm trunc">Текст, фото и песня, которая звучала</p></div><span class="ibtn">${ms('add')}</span></a>
+    <section><div class="row" style="margin-bottom:8px"><span class="h-sm">Главное воспоминание</span><a class="lb-md mut" href="#/day/${d.id}" style="display:inline-flex;align-items:center;gap:2px">Открыть <span class="ms" style="font-size:16px">arrow_forward</span></a></div>
+      <article class="feat"><a href="#/day/${d.id}" class="media" style="display:block"><canvas id="fc" width="1200" height="900" aria-label="Фото дня"></canvas>
+        <span class="ovl" style="top:12px;left:12px">${ms('music_note')}<span>${esc(d.music.label)}</span></span>
+        <div class="row" style="position:absolute;z-index:2;left:12px;right:12px;bottom:12px"><span class="lb-md pri">${fmtLong(d.date)}</span><span class="ovl" style="position:static;background:color-mix(in oklab,var(--highest) 80%,transparent)">${ms(mood.icon, 1)}<span>${mood.label}</span></span></div></a>
+        <div class="body"><h3 class="h-lg">${esc(d.title)}</h3><p class="b-md">${esc(d.description)}</p>
+          <div class="mini"><div class="row" style="gap:12px;justify-content:flex-start"><button class="ibtn" id="hv" aria-label="Озвучить запись"><span class="ms f">play_arrow</span></button><div><div class="lb-md pri">Озвучка дня</div><div class="lb-md mut" style="font-size:11px">голос: ${esc(d.vibe.voice.label)}</div></div></div><div class="wave">${bars}</div></div></div></article></section>
+    <section><div class="row" style="margin-bottom:8px"><span class="h-sm">Недавние настроения</span><span class="lb-md out">Последние ${last14.length} записей</span></div><div class="moods">${pills}</div></section>
+    <section class="card"><div class="row"><div><div class="h-sm">Эмоциональная волна</div><div class="lb-md out" style="margin-top:2px">Энергия последних ${w7.length} записей</div></div><div class="lb-md pri" style="display:flex;align-items:center;gap:4px">${delta >= 0 ? '+' : '−'}${Math.abs(delta)}%${ms(delta >= 0 ? 'trending_up' : 'trending_down')}</div></div>
+      <svg viewBox="0 0 320 80" preserveAspectRatio="none" style="width:100%;height:96px;overflow:visible;margin-top:8px" aria-label="График энергии по дням"><defs><linearGradient id="wf" x1="0" x2="0" y1="0" y2="1"><stop offset="0" style="stop-color:var(--aura);stop-opacity:.25"/><stop offset="1" style="stop-color:var(--aura);stop-opacity:0"/></linearGradient></defs>
+        <path d="${path} L${lastP[0]},80 L${pts[0][0]},80 Z" fill="url(#wf)"/><path d="${path}" style="stroke:var(--aura)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <circle cx="${lastP[0]}" cy="${lastP[1]}" r="4" style="fill:var(--primary)"/><circle cx="${lastP[0]}" cy="${lastP[1]}" r="8" fill="none" style="stroke:var(--primary)" stroke-opacity=".4" stroke-width="1.5"/></svg>
+      <div class="row lb-sm out" style="letter-spacing:0;margin-top:6px">${w7.map((x, i) => `<span style="${i === w7.length - 1 ? 'color:var(--primary)' : ''}">${shortDate(x.date)}</span>`).join('')}</div></section>
+    <section><div class="row" style="margin-bottom:8px"><span class="h-sm">Недавние моменты</span><a class="lb-md mut" href="#/diary">Все записи</a></div>
+      <div class="list">${recent.map(x => { const m = moodOf(x.vibe); return `<a class="item" href="#/day/${x.id}"><img data-photo="${x.id}" alt=""><div class="t"><div class="row"><span class="h-sm trunc" style="font-size:15px">${esc(x.title)}</span><span class="lb-md out" style="flex:none">${shortDate(x.date)}</span></div><span class="b-sm trunc">${esc(x.caption)}</span><span class="lb-md" style="color:var(--onv);margin-top:2px">${m.short} <span class="out">•</span> <span class="out">${TECH[x.vibe.technique].name}</span></span></div></a>`; }).join('')}</div></section>
+  </div>`;
+  const x = $('#fc').getContext('2d');
+  loop(t => { drawPhotoLayer(x, d, P, t, 0, 0, 1200, 900); drawGrain(x, P, t, 1200, 900); });
+  $('#hv').onclick = e => { e.preventDefault(); speak(d, on => { $('#hv').innerHTML = ms(on ? 'stop' : 'play_arrow', 1); }); };
+  fillThumbs();
+}
+
+/* ---------- дневник ---------- */
+let diaryState = { filter: '', view: 'list', q: '' };
+async function viewDiary(){
+  setTab('diary'); topBrand(); applyTheme(latest());
+  const all = sorted().reverse(), shorts = [...new Set(all.map(d => moodOf(d.vibe).short))];
+  app.innerHTML = `<div class="stack fade-in">
+    <section><h1 class="h-dl">Мой дневник ${new Date().getFullYear()}</h1><p class="b-md" style="margin-top:4px">${all.length} сохранённых воспоминаний</p></section>
+    <div class="search">${ms('search')}<input class="field" id="q" placeholder="Найти день: парк, дождь, сдача…" value="${esc(diaryState.q)}" aria-label="Поиск по дневнику"></div>
+    <div class="chips scroll" id="fl"><button class="chip ${diaryState.filter ? '' : 'on'}" data-f="">Все (${all.length})</button>${shorts.map(s => `<button class="chip ${diaryState.filter === s ? 'on' : ''}" data-f="${s}">${s}</button>`).join('')}</div>
+    <div class="row"><span class="lb-md mut">${diaryState.view === 'list' ? 'Хроника' : 'Лента — дни рядом в одном стиле'}</span><div class="seg"><button data-v="list" class="${diaryState.view === 'list' ? 'on' : ''}" aria-label="Списком">${ms('view_agenda')}</button><button data-v="grid" class="${diaryState.view === 'grid' ? 'on' : ''}" aria-label="Сеткой">${ms('grid_view')}</button></div></div>
+    <div id="dl"></div></div>`;
+  const render = () => {
+    const q = diaryState.q.toLowerCase().trim();
+    const items = all.filter(d => (!diaryState.filter || moodOf(d.vibe).short === diaryState.filter) && (!q || (d.title + ' ' + d.text + ' ' + d.music.label).toLowerCase().includes(q)));
+    if (!items.length){ $('#dl').innerHTML = '<p class="b-md" style="text-align:center;padding:24px 0">Ничего не нашлось</p>'; return; }
+    $('#dl').innerHTML = diaryState.view === 'grid'
+      ? `<div class="grid2">${items.map(d => `<a href="#/day/${d.id}"><img data-thumb="${d.id}" alt="${esc(d.title)}"><div class="lb-md pri trunc" style="margin-top:8px">${esc(d.title)}</div><div class="lb-md out">${shortDate(d.date)} · ${TECH[d.vibe.technique].name}</div></a>`).join('')}</div>`
+      : `<div class="list">${items.map(d => { const m = moodOf(d.vibe); return `<a class="dcard" href="#/day/${d.id}"><div class="cov"><img data-photo="${d.id}" alt=""></div>
+          <div class="row"><span class="pill">${ms(m.icon)}${m.short}</span><span class="lb-md out">${shortDate(d.date)}</span></div>
+          <h3 class="h-md">${esc(d.title)}</h3><p class="b-sm" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(d.text)}</p>
+          <div class="mini"><div class="row" style="gap:10px;justify-content:flex-start;min-width:0"><span class="ibtn" style="width:32px;height:32px">${ms('play_arrow', 1)}</span><div style="min-width:0"><div class="lb-md pri trunc">${esc(d.music.label)}</div><div class="lb-md out" style="font-size:11px">${d.vibe.music.bpm} bpm • ${TECH[d.vibe.technique].name}</div></div></div></div></a>`; }).join('')}</div>`;
+    fillThumbs($('#dl'));
+  };
+  render();
+  $('#q').oninput = e => { diaryState.q = e.target.value; render(); };
+  $('#fl').onclick = e => { const b = e.target.closest('.chip'); if (!b) return; diaryState.filter = b.dataset.f; $$('#fl .chip').forEach(c => c.classList.toggle('on', c === b)); render(); };
+  $$('.seg button').forEach(b => b.onclick = () => { diaryState.view = b.dataset.v; viewDiary(); });
+}
+
+/* ---------- новая запись ---------- */
+function viewNew(){
+  setTab('new'); topBack('#/', 'Новая запись');
+  const state = { photos: [], audio: null, tempo: null, mode: null };
+  const today = todayISO();
+  const dateLabel = v => { const [y, m, d] = v.split('-').map(Number); return (v === today ? 'Сегодня, ' : '') + `${d} ${MONTHS[m-1]}${y !== new Date().getFullYear() ? ' ' + y : ''}`; };
+  app.innerHTML = `<div class="stack fade-in">
+    <div class="steps" id="steps"><span class="step on" data-s="1"><b>1</b>История</span><hr><span class="step" data-s="2"><b>2</b>Фото</span><hr><span class="step" data-s="3"><b>3</b>Музыка</span><hr><span class="step" data-s="4"><b>4</b>Синтез</span></div>
+    <section><h1 class="h-dl">Что вы чувствовали сегодня?</h1>
+      <label class="datepill" style="margin-top:12px">${ms('calendar_today')}<span id="dlab">${dateLabel(today)}</span>${ms('expand_more')}<input type="date" id="date" value="${today}" aria-label="Дата записи"></label></section>
+    <section><div class="ta"><textarea id="text" placeholder="Мы гуляли по парку, всё было усыпано жёлтыми листьями. Было холодно, но мы пили какао и говорили часами…" aria-label="Текст о дне"></textarea>
+      <div class="row"><span class="lb-md out" style="display:flex;align-items:center;gap:6px">${ms('notes')}<span id="cnt">0 знаков</span></span></div></div><p class="err" id="e-text"></p>
+      <div class="lb-sm up mut" style="display:flex;align-items:center;gap:6px;margin:16px 0 10px"><span class="ms" style="font-size:16px">auto_awesome</span>Детали атмосферы</div>
+      <div class="chips" id="atm"><button class="chip" data-p="Запах: ">${ms('air')}Какой был запах?</button><button class="chip" data-p="Рядом были: ">${ms('group')}Кто был рядом?</button><button class="chip" data-p="Погода: ">${ms('cloud')}Какая была погода?</button><button class="chip" data-p="Звуки вокруг: ">${ms('hearing')}Что звучало вокруг?</button></div></section>
+    <section><div class="row" style="margin-bottom:10px"><span class="h-md">Фотографии</span><span class="lb-md mut" id="pc">0 из 6</span></div>
+      <input type="file" id="ph" accept="image/*" multiple hidden><div class="tiles" id="tiles"></div><p class="err" id="e-ph"></p></section>
+    <section><div class="h-md" style="margin-bottom:10px">Фоновая музыка</div>
+      <div class="music"><div class="hd"><div class="ic">${ms('music_note', 1)}</div><div style="min-width:0"><div class="h-sm trunc" id="mt">Песня этого дня</div><div class="b-sm trunc" id="ma">ссылка или аудиофайл</div></div></div>
+        <input class="field" id="link" placeholder="Ссылка: Spotify, YouTube, Яндекс Музыка…" aria-label="Ссылка на песню">
+        <input class="field" id="label" placeholder="Исполнитель — название" aria-label="Исполнитель и название">
+        <div class="chips" data-k="tempo"><span class="k">Темп</span><button type="button" class="chip" data-v="slow">медленная</button><button type="button" class="chip" data-v="mid">средняя</button><button type="button" class="chip" data-v="fast">быстрая</button></div>
+        <div class="chips" data-k="mode"><span class="k">Лад</span><button type="button" class="chip" data-v="major">мажор</button><button type="button" class="chip" data-v="minor">минор</button><button type="button" class="chip" data-v="">не знаю</button></div>
+        <label class="btn sec sm" style="align-self:flex-start">${ms('upload')}<span id="auName">Или загрузить аудиофайл</span><input type="file" id="au" accept="audio/*" hidden></label>
+        <p class="b-sm out" style="font-size:12px">Файл анализируется в браузере и не сохраняется: чужие песни целиком хранить нельзя.</p></div>
+      <p class="err" id="e-mu"></p></section>
+    <section><button class="btn w" id="go">Трансформировать в арт-воспоминание</button><p class="note">Система подберёт палитру, художественный приём, ритм кадров и голос под атмосферу дня</p></section>
+  </div>`;
+  const steps = () => {
+    const ok1 = $('#text').value.trim().length >= 20, ok2 = state.photos.length > 0, ok3 = !!($('#link').value.trim() || state.audio);
+    [[1, ok1], [2, ok2], [3, ok3]].forEach(([n, okk]) => { const s = $(`.step[data-s="${n}"]`); s.classList.toggle('done', okk); });
+    const cur = !ok1 ? 1 : !ok2 ? 2 : !ok3 ? 3 : 4; $$('.step').forEach(s => s.classList.toggle('on', +s.dataset.s === cur));
+  };
+  const tiles = () => {
+    const ph = state.photos.map((f, i) => `<div class="tile"><img src="${f.url}" alt="Фото ${i + 1}">${i === 0 ? '<span class="main">Главное</span>' : ''}<button class="x" data-i="${i}" aria-label="Убрать фото">${ms('close')}</button></div>`).join('');
+    const add = state.photos.length < 6 ? `<div class="tile" data-add>${ms('add_photo_alternate')}<span>+ Добавить</span></div>` : '';
+    const ghost = state.photos.length < 2 ? `<div class="tile ghost" data-add>${ms('image')}<span>Плёнка или файлы</span></div>` : '';
+    $('#tiles').innerHTML = ph + add + ghost; $('#pc').textContent = `${state.photos.length} из 6`; steps();
+  };
+  tiles();
+  $('#tiles').onclick = e => { const x = e.target.closest('.x'); if (x){ state.photos.splice(+x.dataset.i, 1); tiles(); return; } if (e.target.closest('[data-add]')) $('#ph').click(); };
+  $('#ph').onchange = e => { for (const f of e.target.files) if (f.type.startsWith('image/') && state.photos.length < 6) state.photos.push({file: f, url: URL.createObjectURL(f)}); e.target.value = ''; $('#e-ph').textContent = ''; tiles(); };
+  $('#tiles').ondragover = e => e.preventDefault();
+  $('#tiles').ondrop = e => { e.preventDefault(); for (const f of e.dataTransfer.files) if (f.type.startsWith('image/') && state.photos.length < 6) state.photos.push({file: f, url: URL.createObjectURL(f)}); tiles(); };
+  $('#au').onchange = e => { state.audio = e.target.files[0] || null; $('#auName').textContent = state.audio ? state.audio.name : 'Или загрузить аудиофайл'; if (state.audio && !$('#label').value) { $('#mt').textContent = state.audio.name.replace(/\.[^.]+$/, ''); $('#ma').textContent = 'аудиофайл'; } $('#e-mu').textContent = ''; steps(); };
+  $('#date').onchange = e => { $('#dlab').textContent = dateLabel(e.target.value || today); };
+  $('#text').oninput = () => { $('#cnt').textContent = $('#text').value.length + ' знаков'; $('#e-text').textContent = ''; steps(); };
+  $('#atm').onclick = e => { const b = e.target.closest('.chip'); if (!b) return; const ta = $('#text'); ta.value = ta.value.trimEnd() + (ta.value.trim() ? '\n' : '') + b.dataset.p; ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); ta.dispatchEvent(new Event('input')); };
+  $('#label').oninput = () => { const v = $('#label').value.split(/\s+[—–-]\s+/); $('#mt').textContent = (v[1] || v[0] || 'Песня этого дня'); $('#ma').textContent = v[1] ? v[0] : (v[0] ? '' : 'ссылка или аудиофайл'); };
+  $('#link').oninput = () => { $('#e-mu').textContent = ''; steps(); };
+  $$('.music .chips').forEach(g => g.onclick = e => { const b = e.target.closest('.chip'); if (!b) return; $$('.chip', g).forEach(c => c.classList.toggle('on', c === b)); state[g.dataset.k] = b.dataset.v; });
+  $('#go').onclick = async () => {
+    const text = $('#text').value.trim(), link = $('#link').value.trim(), label = $('#label').value.trim();
+    let bad = false;
+    if (text.length < 20){ $('#e-text').textContent = 'Напишите о дне хотя бы пару предложений.'; bad = true; }
+    if (!state.photos.length){ $('#e-ph').textContent = 'Добавьте хотя бы одно фото.'; bad = true; }
+    if (!link && !state.audio){ $('#e-mu').textContent = 'Добавьте ссылку на песню или аудиофайл.'; bad = true; }
+    else if (link && !/^https?:\/\//i.test(link)){ $('#e-mu').textContent = 'Ссылка должна начинаться с http:// или https://'; bad = true; }
+    if (bad){ $('.err:not(:empty)')?.scrollIntoView({behavior:'smooth', block:'center'}); return; }
+    await createDay({ text, link, label, date: $('#date').value || today, photos: state.photos.map(p => p.file), audio: state.audio, tempo: state.tempo, mode: state.mode });
+  };
+}
+async function createDay(input){
+  const b = busy('Слушаю песню');
+  try {
+    let music;
+    if (input.audio){ music = await analyzeAudioFile(input.audio); if (input.label) music.label = input.label; if (input.tempo && TEMPO_CHIP[input.tempo]) Object.assign(music, TEMPO_CHIP[input.tempo]); if (input.mode) music.minor = input.mode === 'minor'; if (input.link) music.url = input.link; }
+    else music = musicFromLink(input.link, input.label, input.tempo, input.mode);
+    b.say('Смотрю фото');
+    const imgs = await Promise.all(input.photos.slice(0, 6).map(f => loadImg(URL.createObjectURL(f))));
+    const photos = imgs.map(im => { const k = Math.min(1, 1080 / Math.max(im.naturalWidth, im.naturalHeight)); const c = makeCanvas(Math.round(im.naturalWidth*k), Math.round(im.naturalHeight*k)); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.8); });
+    b.say('Читаю запись');
+    const { vibe, title, caption, description } = await buildVibe(input.text, imgs, music);
+    b.say('Рисую картину дня');
+    const id = 'd' + Date.now().toString(36);
+    const day = { id, date: input.date, createdAt: Date.now(), text: input.text, photos, music, vibe, title, caption, description, v2: 1, rev: 0 };
+    const aiImg = await generateAIImage(day); if (aiImg) day.art = [aiImg];
+    if (input.audio) sessionAudio.set(id, URL.createObjectURL(input.audio));
+    DAYS.push(day); save();
+    await new Promise(r => setTimeout(r, 450));
+    go('#/day/' + id);
+  } catch (err) { console.error(err); toast('Не получилось собрать день: ' + (err.message || 'неизвестная ошибка')); }
+  finally { b.done(); }
+}
+
+/* ---------- воспоминание ---------- */
+async function viewDay(id){
+  setTab(''); const day = DAYS.find(d => d.id === id); if (!day){ go('#/diary'); return; }
+  topBack('#/diary', 'Назад', `<button class="ibtn" id="tPng" aria-label="Скачать PNG">${ms('ios_share')}</button>`);
+  let P = await prepare(day); applyTheme(day);
+  const list = sorted(), i = list.findIndex(d => d.id === id), prev = list[i-1], next = list[i+1];
+  const m = day.music, num = dayNum(day);
+  const sc = [['warmth','Тепло'],['energy','Энергия'],['tension','Напряжение'],['tempo','Темп']];
+  app.innerHTML = `<div class="stack fade-in">
+    <section><p class="lb-sm up mut">${fmtLong(day.date).toUpperCase()} • ПАПКА № ${num}</p><h1 class="h-dl" style="margin-top:8px">${esc(day.title)}</h1><p class="hand" style="margin-top:8px">${esc(day.caption)}</p></section>
+    <div class="poster"><canvas id="pc" width="1080" height="1350" aria-label="Воспоминание дня: ${esc(day.title)}"></canvas></div>
+    <div class="player"><div class="row"><div class="row" style="gap:12px;justify-content:flex-start;min-width:0"><button class="ibtn solid" id="bMusic" aria-label="Включить звук дня"><span class="ms f">play_arrow</span></button>
+        <div style="min-width:0"><div class="h-sm trunc">${sessionAudio.get(day.id) ? esc(m.label) : 'Саундтрек дня'}</div><div class="lb-md mut trunc">${sessionAudio.get(day.id) ? 'ваш аудиофайл' : 'по мотивам: ' + esc(m.label)} • ${day.vibe.music.bpm} bpm${day.vibe.music.minor === true ? ' • минор' : day.vibe.music.minor === false ? ' • мажор' : ''}</div></div></div>
+        <button class="ibtn" id="bVoice" aria-label="Озвучка описания">${ms('record_voice_over')}</button></div>
+      <div class="prog"><i id="prog"></i></div><div class="row lb-sm out" style="letter-spacing:0;margin-top:6px"><span id="pcur">кадр 1</span><span>смена каждые ${day.vibe.frameDur.toFixed(1)} с</span></div>
+      <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap;justify-content:flex-start">${m.url ? `<a class="btn sec sm" href="${esc(m.url)}" target="_blank" rel="noopener">Оригинал в ${esc(m.service)} ${ms('open_in_new')}</a>` : ''}<label class="row" style="gap:6px;justify-content:flex-start"><span class="lb-md out">Голос</span><select id="voiceSel" class="field" style="height:40px;width:auto;max-width:220px;font-size:13px"></select></label></div>
+      <div id="player" style="margin-top:12px"></div></div>
+    <section class="card"><div class="row" style="margin-bottom:14px"><div class="row" style="gap:8px">${ms('fingerprint')}<span class="h-sm">Эмоциональный отпечаток</span></div><span class="lb-sm up mut">AURA</span></div>
+      <div class="bento" id="bento"></div>
+      <div class="row" style="margin:16px 0 8px"><span class="lb-sm up mut">Палитра дня</span><span class="lb-sm out" style="letter-spacing:0">5 экстрактов</span></div><div class="pal" id="pal"></div>
+      <details><summary>Подправить настроение вручную</summary><div style="margin-top:10px">${sc.map(([k, n]) => `<div class="sl"><span>${n}</span><input type="range" min="0" max="100" step="1" value="${Math.round(day.vibe.scales[k]*100)}" data-k="${k}" aria-label="${n}"><b id="sv-${k}">${Math.round(day.vibe.scales[k]*100)}</b></div>`).join('')}<p class="b-sm out" style="font-size:12px">Воспоминание и цвета сайта пересоберутся.</p></div></details></section>
+    <section class="card"><div class="h-sm" style="margin-bottom:8px">Папка дня</div><div class="files" id="files"></div></section>
+    <section class="card"><div class="h-sm" style="margin-bottom:8px">Описание дня</div><p class="quote">${esc(day.description)}</p>
+      <details><summary>Исходная запись</summary><p class="b-sm" style="margin-top:8px">${esc(day.text)}</p></details></section>
+    <section class="card"><div class="row" style="margin-bottom:10px"><span class="h-sm">Фото дня</span><span class="lb-md out">на картине — полароидом</span></div><div class="tiles" id="phs"></div></section>
+    <div class="ctas"><button class="btn" id="bPng">${ms('download')}PNG</button><button class="btn sec" id="bVid">${ms('movie')}<span>Видео 15 с</span></button></div>
+    <div class="ctas"><button class="btn sec sm" id="bRe">${ms('auto_fix_high')}Пересоздать дизайн</button><button class="btn sec sm" id="bDel">${ms('delete')}<span>Удалить</span></button></div>
+    <div class="row">${prev ? `<a class="lb-md mut trunc" href="#/day/${prev.id}">← ${esc(prev.title)}</a>` : '<span></span>'}${next ? `<a class="lb-md mut trunc" href="#/day/${next.id}" style="text-align:right">${esc(next.title)} →</a>` : ''}</div>
+    <p class="disc">Настроение дня — художественная интерпретация записи, а не психологическая оценка.</p>
+  </div>`;
+  const side = () => {
+    const v = day.vibe, s = v.scales, mood = moodOf(v);
+    $('#bento').innerHTML = `
+      <div class="cell w"><span class="lb">${ms('psychology')}Тональность</span><span class="h-sm">${mood.label}</span></div>
+      <div class="cell"><span class="lb">${ms('electric_bolt')}Энергия</span><span class="h-sm" style="font-size:15px">${energyWord(s.energy)}</span></div>
+      <div class="cell"><span class="lb">${ms('device_thermostat')}Температура</span><span class="h-sm" style="font-size:15px">${tempWord(s.warmth)}</span></div>
+      <div class="cell"><span class="lb">${ms('palette')}Приём</span><span class="h-sm" style="font-size:15px">${TECH[v.technique].name}: ${TECH[v.technique].what}</span></div>
+      <div class="cell"><span class="lb">${ms('graphic_eq')}Ритм кадров</span><span class="h-sm" style="font-size:15px">${v.cut === 'cut' ? 'Резкий монтаж' : 'Плавная смена'}</span></div>`;
+    $('#pal').innerHTML = [P.th.bg, P.th.accent, P.th.accent2, ...v.photo.colors.slice(0, 2)].map(c => `<div><i style="background:${c}"></i><span>${c}</span></div>`).join('');
+    $('#files').innerHTML = `<div><span>запись.txt</span><span>${day.text.split(/\s+/).length} слов</span></div><div><span>фото</span><span>${day.demo ? 3 : day.photos.length} шт.</span></div><div><span>песня</span><span>${esc(m.service)}</span></div><div><span>картина</span><span>${day.art ? 'ИИ-генерация' : 'нарисована системой'}, ${TECH[v.technique].name}</span></div><div><span>описание</span><span>${day.description.split(/\s+/).length} слов</span></div><div><span>озвучка</span><span>${esc(v.voice.label)}</span></div>`;
+  };
+  side();
+  const c = $('#pc'), x = c.getContext('2d');
+  loop(t => { drawPoster(x, day, P, t); const n = P.photos.length, dur = day.vibe.frameDur; $('#prog').style.width = ((t % (dur*n)) / (dur*n) * 100).toFixed(1) + '%'; $('#pcur').textContent = `кадр ${Math.floor(t / dur) % n + 1} из ${n}`; });
+  const player = $('#player'), audioUrl = sessionAudio.get(day.id);
+  $('#bMusic').onclick = () => {
+    if (audioUrl){ let a = $('audio', player); if (!a){ player.innerHTML = `<audio src="${audioUrl}" controls style="width:100%"></audio>`; a = $('audio', player); } if (a.paused){ a.play(); $('#bMusic').innerHTML = ms('pause', 1); } else { a.pause(); $('#bMusic').innerHTML = ms('play_arrow', 1); } }
+    else { if (SOUND && SOUND.day === day.id){ stopSoundtrack(); $('#bMusic').innerHTML = ms('play_arrow', 1); } else { startSoundtrack(day); $('#bMusic').innerHTML = ms('pause', 1); } }
+  };
+  $('#bVoice').onclick = () => speak(day, on => { $('#bVoice').innerHTML = ms(on ? 'stop_circle' : 'record_voice_over'); });
+  const fillVoices = () => { const vs = ruVoices(), cur = pickVoice(); const sel = $('#voiceSel'); if (!sel) return; sel.innerHTML = vs.length ? vs.map(v => `<option ${cur && v.name === cur.name ? 'selected' : ''}>${esc(v.name)}</option>`).join('') : '<option>голос браузера</option>'; };
+  fillVoices(); if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = fillVoices;
+  $('#voiceSel').onchange = e => { try { localStorage.setItem('aftertone.voice', e.target.value); } catch {} speechSynthesis.cancel(); };
+  $('#phs').innerHTML = P.raw.map((im, k) => { const cc = makeCanvas(300, 336); drawCover(cc.getContext('2d'), im, 0, 0, 300, 336, 1, 0, 0); return `<div class="tile"><img src="${cc.toDataURL('image/jpeg', 0.8)}" alt="Фото ${k + 1}"></div>`; }).join('');
+  const png = () => { const a = document.createElement('a'); a.download = day.title + '.png'; a.href = c.toDataURL('image/png'); a.click(); };
+  $('#bPng').onclick = png; $('#tPng').onclick = png;
+  $('#bVid').onclick = e => recordVideo(c, day, e.currentTarget);
+  $('#bRe').onclick = async () => { day.seedShift = (day.seedShift || 0) + 1; day.rev++; save(); P = await prepare(day); toast('Новая версия: другие мазки, формы и кадрирование по тем же правилам'); };
+  $('#bDel').onclick = e => { const b = e.currentTarget; if (!b.dataset.sure){ b.dataset.sure = 1; $('span:last-child', b).textContent = 'Точно? Ещё раз'; setTimeout(() => { delete b.dataset.sure; $('span:last-child', b).textContent = 'Удалить'; }, 4000); return; }
+    DAYS = DAYS.filter(d => d.id !== day.id); save(); go('#/diary'); };
+  let timer;
+  $$('input[type=range]').forEach(r => r.oninput = () => {
+    day.vibe.scales[r.dataset.k] = r.value / 100; $('#sv-' + r.dataset.k).textContent = r.value;
+    clearTimeout(timer); timer = setTimeout(async () => { finalize(day.vibe); day.rev++; save(); P = await prepare(day); applyTheme(day); side(); }, 220);
+  });
+}
+let ac;
+function recordVideo(canvas, day, btn){
+  if (!window.MediaRecorder || !canvas.captureStream){ toast('Запись видео не поддерживается этим браузером'); return; }
+  const stream = canvas.captureStream(30), a = $('#player audio');
+  if (!a && SOUND && BUS){ const dest = AC.createMediaStreamDestination(); BUS.connect(dest); dest.stream.getAudioTracks().forEach(tr => stream.addTrack(tr)); }
+  if (a){ try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (!a._src){ a._src = ac.createMediaElementSource(a); a._src.connect(ac.destination); } const dest = ac.createMediaStreamDestination(); a._src.connect(dest); dest.stream.getAudioTracks().forEach(tr => stream.addTrack(tr)); a.currentTime = 0; a.play(); } catch (err) { console.warn(err); } }
+  const type = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+  const rec = new MediaRecorder(stream, type ? {mimeType: type} : undefined), chunks = [], lab = $('span:last-child', btn);
+  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  rec.onstop = () => { const blob = new Blob(chunks, {type: rec.mimeType}); const l = document.createElement('a'); l.download = day.title + (rec.mimeType.includes('mp4') ? '.mp4' : '.webm'); l.href = URL.createObjectURL(blob); l.click(); lab.textContent = 'Видео 15 с'; btn.disabled = false; };
+  rec.start(); btn.disabled = true; let left = 15; lab.textContent = `Запись ${left} с`;
+  const iv = setInterval(() => { left--; lab.textContent = `Запись ${left} с`; if (left <= 0){ clearInterval(iv); rec.stop(); } }, 1000);
+  if (!a && !SOUND) toast('Чтобы в видео был звук, сначала включите саундтрек дня.');
+}
+
+/* ---------- календарь ---------- */
+let calMonth = null, calSel = null;
+async function viewCalendar(){
+  setTab('calendar'); topBrand();
+  const L = latest(); if (!calMonth) calMonth = L.date.slice(0, 7);
+  const [y, mo] = calMonth.split('-').map(Number);
+  const byDate = {}; for (const d of sorted()) (byDate[d.date] = byDate[d.date] || []).push(d);
+  const inMonth = sorted().filter(d => d.date.startsWith(calMonth));
+  if (!calSel || !calSel.startsWith(calMonth)) calSel = inMonth.length ? inMonth.at(-1).date : null;
+  const selDay = calSel && byDate[calSel] ? byDate[calSel].at(-1) : null;
+  applyTheme(selDay || L);
+  const first = new Date(y, mo - 1, 1), daysIn = new Date(y, mo, 0).getDate(), lead = (first.getDay() + 6) % 7, today = todayISO();
+  let cells = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(w => `<div class="wd">${w}</div>`).join('');
+  for (let k = 0; k < lead; k++) cells += '<div class="d"></div>';
+  for (let dd = 1; dd <= daysIn; dd++){
+    const iso = `${y}-${String(mo).padStart(2,'0')}-${String(dd).padStart(2,'0')}`, ds = byDate[iso];
+    const cls = ['d', ds ? 'has' : '', iso === calSel ? 'sel' : '', iso === today ? 'today' : ''].join(' ');
+    cells += `<div class="${cls}" data-iso="${iso}"><span ${ds ? `style="background:${ds.at(-1).vibe.swatch.accent};color:${ds.at(-1).vibe.swatch.onAccent}" role="button" aria-label="${esc(ds.at(-1).title)}"` : ''}>${dd}</span></div>`;
+  }
+  const mood = selDay ? moodOf(selDay.vibe) : null;
+  app.innerHTML = `<div class="stack fade-in">
+    <section><h1 class="h-dl">Календарь</h1><p class="b-md" style="margin-top:4px">Цвет каждого дня — цвет его настроения</p></section>
+    <section class="card"><div class="row" style="margin-bottom:12px"><button class="ibtn" id="mP" aria-label="Предыдущий месяц">${ms('chevron_left')}</button><span class="h-sm">${MONTHS_NOM[mo-1]} ${y}</span><button class="ibtn" id="mN" aria-label="Следующий месяц">${ms('chevron_right')}</button></div><div class="cal" id="cal">${cells}</div></section>
+    ${selDay ? `<section class="card c2"><span class="lb-sm up mut">${fmtLong(selDay.date)}</span><h2 class="h-lg" style="margin:6px 0 12px">${esc(selDay.title)}</h2>
+      <div class="row" style="justify-content:flex-start;gap:10px;margin-bottom:8px"><span class="ms" style="color:var(--onv)">${mood.icon}</span><span class="b-md">${mood.label}</span></div>
+      <div class="row" style="justify-content:flex-start;gap:10px;margin-bottom:16px"><span class="ms" style="color:var(--onv)">music_note</span><div style="min-width:0"><div class="lb-md out">Саундтрек дня</div><div class="b-md trunc" style="color:var(--on)">${esc(selDay.music.label)}</div></div></div>
+      <a class="btn w" href="#/day/${selDay.id}">Открыть воспоминание ${ms('arrow_forward')}</a></section>`
+    : `<section class="card c2" style="text-align:center"><p class="b-md" style="margin-bottom:12px">${calSel ? 'В этот день записи нет' : 'В этом месяце пока нет записей'}</p><a class="btn sec sm" href="#/new">Записать день</a></section>`}
+    ${inMonth.length > 1 ? `<section><div class="h-sm" style="margin-bottom:8px">Другие дни в ${MONTHS_PREP[mo-1]}</div><div class="list">${inMonth.filter(d => d !== selDay).reverse().map(d => `<a class="item" href="#/day/${d.id}"><div style="width:52px;text-align:center;flex:none"><div class="h-sm">${+d.date.slice(8)}</div><div class="lb-md out">${MONTHS[mo-1].slice(0,3)}</div></div><div class="t"><span class="h-sm trunc" style="font-size:15px">${esc(d.title)}</span><span class="b-sm">${moodOf(d.vibe).label}</span></div>${ms('chevron_right')}</a>`).join('')}</div></section>` : ''}
+  </div>`;
+  const shift = k => { const d = new Date(y, mo - 1 + k, 1); calMonth = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; viewCalendar(); };
+  $('#mP').onclick = () => shift(-1); $('#mN').onclick = () => shift(1);
+  $('#cal').onclick = e => { const c = e.target.closest('.d[data-iso]'); if (!c) return; calSel = c.dataset.iso; viewCalendar(); };
+}
+
+/* ---------- капсула времени ---------- */
+const CKEY = 'aftertone.capsules.v1';
+let CAPS = [];
+function saveCaps(){ if (!storageOK) return; try { localStorage.setItem(CKEY, JSON.stringify(CAPS)); } catch {} }
+function seedCapsules(force){
+  let st = null; if (!force){ try { st = JSON.parse(localStorage.getItem(CKEY) || 'null'); } catch {} }
+  if (st) { CAPS = st; return; }
+  const t = todayISO(), [yy] = t.split('-').map(Number);
+  CAPS = [
+    { id:'c1', created:'2026-11-08', open:`${yy + 1}-05-08`, text:'Письмо из осеннего парка. Помни, как было холодно и как грело какао. Если сейчас тяжело — выйди погулять, листья всегда возвращаются.', music:'Frank Sinatra — Fly Me to the Moon' },
+    { id:'c2', created:'2026-05-21', open:t, text:'Шум прибоя в шесть утра, термос с горячим чаем и ощущение, что всё только начинается. Не забывай замедляться.', music:'Ólafur Arnalds — Near Light' },
+  ];
+  saveCaps();
+}
+function viewCapsule(){
+  setTab('capsule'); topBrand(); applyTheme(latest());
+  const t = todayISO(), plus = n => { const d = new Date(); d.setMonth(d.getMonth() + n); return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10); };
+  const daysTo = iso => Math.round((Date.parse(iso) - Date.parse(t)) / 864e5);
+  const caps = [...CAPS].sort((a,b) => a.open < b.open ? -1 : 1);
+  app.innerHTML = `<div class="stack fade-in">
+    <section><div class="row" style="justify-content:flex-start;gap:8px"><h1 class="h-dl">Капсула времени</h1><span class="ms" style="font-size:26px;color:var(--onv)">hourglass_top</span></div><p class="b-md" style="margin-top:4px">Послание себе в будущее. Откроется только в назначенную дату.</p></section>
+    <section class="card"><div class="row" style="margin-bottom:12px"><span class="h-sm">Создать капсулу</span><span class="pill">Черновик</span></div>
+      <div class="ta" style="background:var(--cont)"><textarea id="ct" placeholder="Что ты хочешь сказать себе через полгода?" style="min-height:110px" aria-label="Текст послания"></textarea></div><p class="err" id="e-ct"></p>
+      <input class="field" id="cm" placeholder="Саундтрек момента: исполнитель — название" style="margin-top:10px" aria-label="Песня">
+      <label class="row card c2" style="margin-top:10px;padding:12px 14px;position:relative"><span class="row" style="gap:10px;justify-content:flex-start">${ms('calendar_today')}<span class="b-md" style="color:var(--on)">Дата открытия</span></span><span class="lb-md mut" id="cdl">${fmtLong(plus(6))}</span><input type="date" id="cd" value="${plus(6)}" min="${plus(0)}" style="position:absolute;inset:0;opacity:0;width:100%;cursor:pointer" aria-label="Дата открытия"></label><p class="err" id="e-cd"></p>
+      <button class="btn w" id="seal" style="margin-top:14px">${ms('lock')}Запечатать капсулу</button></section>
+    <section><div class="row" style="margin-bottom:8px"><span class="h-sm">Запечатанные капсулы</span><span class="lb-md out">${caps.length}</span></div>
+      <div class="list">${caps.map(c => { const n = daysTo(c.open), ready = n <= 0; return `<div class="lock"><div class="ic">${ms(ready ? 'lock_open' : 'lock')}</div><div style="flex:1;min-width:0">
+        <div class="h-sm">${esc(makeTitle(analyzeText(c.text)))}</div><div class="lb-md out" style="margin-top:2px">Создано: ${fmtLong(c.created)}</div>
+        <div class="b-sm" style="margin-top:6px;color:${ready ? 'var(--primary)' : 'var(--onv)'}">${ready ? 'Откроется сегодня' : `Откроется ${fmtLong(c.open)} (через ${n} дн.)`}</div>
+        ${ready ? `<button class="btn sm" data-open="${c.id}" style="margin-top:10px">${ms('auto_awesome')}Открыть капсулу</button><div class="revealed" id="rv-${c.id}" hidden><p class="quote">«${esc(c.text)}»</p>${c.music ? `<div class="lb-md mut" style="margin-top:8px;display:flex;gap:6px;align-items:center">${ms('music_note')}${esc(c.music)}</div>` : ''}</div>` : ''}</div></div>`; }).join('')}</div></section>
+  </div>`;
+  $('#cd').onchange = e => { $('#cdl').textContent = e.target.value ? fmtLong(e.target.value) : ''; };
+  $$('[data-open]').forEach(b => b.onclick = () => { $('#rv-' + b.dataset.open).hidden = false; b.remove(); });
+  $('#seal').onclick = () => {
+    const text = $('#ct').value.trim(), open = $('#cd').value; let bad = false;
+    if (text.length < 10){ $('#e-ct').textContent = 'Напишите послание хотя бы в одно предложение.'; bad = true; } else $('#e-ct').textContent = '';
+    if (!open || open <= t){ $('#e-cd').textContent = 'Выберите дату в будущем.'; bad = true; } else $('#e-cd').textContent = '';
+    if (bad) return;
+    CAPS.push({ id:'c' + Date.now().toString(36), created:t, open, text, music: $('#cm').value.trim() }); saveCaps();
+    toast('Капсула запечатана до ' + fmtLong(open)); viewCapsule();
+  };
+}
+
+/* ---------- навигация ---------- */
+let curPath = null;
+function go(hash){ curPath = hash; try { if (location.hash !== hash) history.pushState(null, '', hash); } catch {} route(hash); }
+document.addEventListener('click', e => { const a = e.target.closest('a[href^="#/"]'); if (!a || e.metaKey || e.ctrlKey) return; e.preventDefault(); go(a.getAttribute('href')); });
+async function route(hash){
+  hash = hash || location.hash || '#/'; curPath = hash;
+  stopAll(); window.scrollTo(0, 0); $('.sheet')?.remove();
+  const [, r, id] = (hash.replace(/^#/, '') || '/').split('/');
+  if (r === 'new') viewNew();
+  else if (r === 'day') await viewDay(id);
+  else if (r === 'diary' || r === 'feed') await viewDiary();
+  else if (r === 'calendar' || r === 'archive') await viewCalendar();
+  else if (r === 'capsule') viewCapsule();
+  else await viewHome();
+}
+(async function init(){
+  app.innerHTML = '<div class="busy"><div class="ring"></div><div class="h-md">Открываю дневник</div></div>';
+  await Promise.race([Promise.all(['700 40px Montserrat','500 20px Inter','500 30px Caveat','24px "Material Symbols Outlined"'].map(f => document.fonts.load(f))), new Promise(r => setTimeout(r, 2500))]).catch(() => {});
+  const stored = load();
+  if (stored && stored.length) DAYS = stored; else await seedDemo();
+  let migrated = false;
+  for (const d of DAYS) if (!d.v2){ const A = analyzeText(d.text); Object.assign(d.vibe.textInfo, { scene: sceneKind(A.raw), weather: weatherOf(A.raw), tod: A.tod, season: A.season }); d.title = makeTitle(A, d.vibe.scales); const st = makeStory(A, d.vibe, hashStr(d.text)); d.description = st.description; d.caption = st.caption; d.v2 = 1; d.rev++; migrated = true; }
+  if (migrated) save();
+  seedCapsules(false);
+  const onNav = () => { if ((location.hash || '#/') !== curPath) route(location.hash); };
+  window.addEventListener('hashchange', onNav); window.addEventListener('popstate', onNav);
+  if ('speechSynthesis' in window) speechSynthesis.getVoices();
+  route();
+})();
+</script>
+</body>
+</html>
