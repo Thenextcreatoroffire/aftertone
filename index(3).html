@@ -725,7 +725,7 @@ async function prepare(day){
    Если задан IMAGE_ENDPOINT (например, Supabase Edge Function с моделью генерации изображений),
    картина запрашивается у ИИ по промпту из вайба дня. Иначе система рисует её сама:
    сцена по теме записи, палитра из фото и настроения, художественный приём дня. */
-const IMAGE_ENDPOINT = '';
+const IMAGE_ENDPOINT = 'https://aftertone-image.jdsss1156.workers.dev/';
 const TECH_EN = { monet:'impressionist oil painting in the style of Claude Monet, soft visible brushstrokes, diffused light',
   kandinsky:'abstract geometric composition inspired by Wassily Kandinsky, circles, sharp lines, bold shapes', film:'nostalgic 35mm film photograph, warm grain, light leaks, faded colors',
   minimal:'japanese minimalist illustration, lots of empty space, calm, muted tones', riso:'risograph print, halftone dots, two-color misregistration, vivid poster colors' };
