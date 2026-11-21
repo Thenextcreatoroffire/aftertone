@@ -876,10 +876,12 @@ async function prepare(day){
   const key = day.id + ':' + day.rev; if (prepCache.has(key)) return prepCache.get(key);
   const v = day.vibe, th = themeFromVibe(v), raw = await photoSources(day);
   const seed = hashStr(day.id) + (day.seedShift || 0) * 7919;
-  const base = day.art && day.art.length ? await Promise.all(day.art.map(loadImg)) : [genArt(day, th, seed), genArt(day, th, seed + 101)];
-  const isAI = !!(day.art && day.art.length);
-  const photos = base.map((s, i) => processPhoto(s, v.technique, th, seed + i, isAI ? 0.12 : 0.55));
-  const p = { th, photos, raw, seed, v, ai: isAI }; prepCache.set(key, p); return p;
+  const isAI = !!(day.art && day.art.length), photoMode = !isAI && !day.demo && raw.length > 0;
+  // нет ИИ-картинки (например, закончился дневной лимит нейросети) → главный кадр — фото самого человека,
+  // мягко обработанные приёмом дня; кадры меняются в ритме песни
+  const base = isAI ? await Promise.all(day.art.map(loadImg)) : photoMode ? raw : [genArt(day, th, seed), genArt(day, th, seed + 101)];
+  const photos = base.map((s, i) => processPhoto(s, v.technique, th, seed + i, isAI ? 0.12 : photoMode ? 0.2 : 0.55));
+  const p = { th, photos, raw, seed, v, ai: isAI, photoMode }; prepCache.set(key, p); return p;
 }
 
 /* ---------- картина дня ----------
@@ -939,9 +941,7 @@ async function generateAIImage(day, quiet){
     why = String(j.error || ('HTTP ' + r.status)); console.warn('Воркер не нарисовал картинку:', why);
   } catch (e) { why = String(e && (e.name === 'AbortError' ? 'timeout' : e.message || e)); console.warn(e); }
   finally { clearTimeout(tm); }
-  try { const img = await pollinationsDirect(day); day.artModel = 'pollinations-flux'; return img; }
-  catch (e) { console.warn('Pollinations из браузера:', e); }
-  if (!quiet) toast(`ИИ-картинка не получилась: ${aiWhy(why)}. Картину нарисовала система — попробуйте позже «Пересоздать дизайн».`, 6000);
+  if (!quiet) toast(`ИИ-картинка не получилась: ${aiWhy(why)}. На открытке ваши фото в стиле дня — позже можно нажать «Пересоздать дизайн».`, 6000);
   return null;
 }
 function artPalette(v, th){
@@ -1518,7 +1518,7 @@ function viewSettings(){
           <div class="row" style="gap:8px"><select class="field" id="sVoice" aria-label="Голос озвучки" style="flex:1"></select><button class="btn sec sm" id="sVoiceT">${ms('play_arrow')}Послушать</button></div></div>
       </section>
       <section class="card"><h2 class="h-sm">Картина дня</h2>
-        <div class="setrow"><div><div class="b-md" style="color:var(--on)">Рисовать нейросетью</div><div class="b-sm">Если выключить, картина собирается из правил — быстрее и без интернета</div></div>${sw('sAi', SET.ai)}</div>
+        <div class="setrow"><div><div class="b-md" style="color:var(--on)">Рисовать нейросетью</div><div class="b-sm">Если выключить или лимит нейросети закончился, на открытке будут ваши фото в стиле дня</div></div>${sw('sAi', SET.ai)}</div>
         <div class="setrow" style="flex-direction:column;align-items:stretch"><button class="btn sec sm" id="aiTest">${ms('auto_awesome')}Проверить ИИ-картинку</button><div id="aiRes" class="b-sm"></div></div>
       </section>
     </div>
@@ -1666,8 +1666,8 @@ function drawPhotoLayer(x, day, P, t, ax, ay, aw, ah){
     x.fillStyle = th.accent; x.beginPath(); x.arc(ax + aw*0.76, ay + ah*0.13, aw*0.045, 0, 7); x.fill();
     x.strokeStyle = th.muted; x.lineWidth = 1.5; x.beginPath(); x.moveTo(ax + aw*0.1, by + bh + ah*0.1); x.lineTo(ax + aw*0.9, by + bh + ah*0.1); x.stroke();
   }
-  if (P.raw && P.raw.length && !P.noPolaroid){
-    const ph = P.raw[Math.floor(t / (dur*1.5)) % P.raw.length], pw = aw*0.26, phh = pw*1.16, m = pw*0.06;
+  if (P.raw && P.raw.length && !P.noPolaroid && !(P.photoMode && P.raw.length < 2)){
+    const ph = P.photoMode ? P.raw[(idx + 1) % P.raw.length] : P.raw[Math.floor(t / (dur*1.5)) % P.raw.length], pw = aw*0.26, phh = pw*1.16, m = pw*0.06;
     x.save(); x.translate(ax + aw - pw*0.62 - aw*0.03, ay + ah - phh*0.6 - ah*0.04); x.rotate((R() - 0.5)*0.16);
     x.fillStyle = 'rgba(0,0,0,.28)'; x.fillRect(-pw/2 + 6, -phh/2 + 8, pw, phh);
     x.fillStyle = '#f5f2ea'; x.fillRect(-pw/2, -phh/2, pw, phh);
@@ -2124,7 +2124,7 @@ async function viewDay(id){
       <div class="cell"><span class="lb">${ms('music_note')}Из песни</span><span class="b-md" style="color:var(--on)">${v.music.bpm} bpm${v.music.minor === true ? ', минор' : v.music.minor === false ? ', мажор' : ''}${v.music.genre ? ', ' + v.music.genre : ''}</span></div>`;
     $('#rules').innerHTML = v.rules.map(r => `<li>${ms('arrow_forward')}${esc(r)}</li>`).join('');
     $('#pal').innerHTML = [P.th.bg, P.th.accent, P.th.accent2, ...v.photo.colors.slice(0, 2)].map(c => `<div><i style="background:${c}"></i><span>${c}</span></div>`).join('');
-    $('#files').innerHTML = `<div><span>запись.txt</span><span>${day.text.split(/\s+/).length} слов</span></div><div><span>фото</span><span>${day.demo ? 3 : day.photos.length} шт.</span></div><div><span>песня</span><span>${m.source === 'none' ? 'без песни — саундтрек дня' : esc(m.service)}</span></div><div><span>картина</span><span>${day.art ? 'ИИ-генерация' + (day.artModel ? ' (' + esc(day.artModel) + ')' : '') : 'нарисована системой'}, ${TECH[v.technique].name}</span></div><div><span>описание</span><span>${day.description.split(/\s+/).length} слов</span></div><div><span>озвучка</span><span>${esc(v.voice.label)}</span></div>`;
+    $('#files').innerHTML = `<div><span>запись.txt</span><span>${day.text.split(/\s+/).length} слов</span></div><div><span>фото</span><span>${day.demo ? 3 : day.photos.length} шт.</span></div><div><span>песня</span><span>${m.source === 'none' ? 'без песни — саундтрек дня' : esc(m.service)}</span></div><div><span>картина</span><span>${day.art ? 'ИИ-генерация' + (day.artModel ? ' (' + esc(day.artModel) + ')' : '') : P.photoMode ? 'ваши фото в стиле дня' : 'нарисована системой'}, ${TECH[v.technique].name}</span></div><div><span>описание</span><span>${day.description.split(/\s+/).length} слов</span></div><div><span>озвучка</span><span>${esc(v.voice.label)}</span></div>`;
   };
   side();
   const c = $('#pc'), x = c.getContext('2d');
@@ -2157,7 +2157,7 @@ async function viewDay(id){
   $('#bRe').onclick = async () => {
     day.seedShift = (day.seedShift || 0) + 1;
     if (IMAGE_ENDPOINT && SET.ai){ const b = busy('Нейросеть рисует день'); const img = await generateAIImage(day, true); b.done(); if (img){ day.art = [img]; day.rev++; save(); P = await prepare(day); side(); toast('Новая картина от нейросети'); return; } }
-    day.rev++; save(); P = await prepare(day); toast(IMAGE_ENDPOINT && SET.ai ? 'Нейросеть сейчас недоступна — показываю новую версию по правилам системы' : 'Новая версия картины по тем же правилам', 5000); };
+    day.rev++; save(); P = await prepare(day); toast(IMAGE_ENDPOINT && SET.ai ? (day.demo ? 'Нейросеть сейчас недоступна — показываю новую версию по правилам системы' : 'Нейросеть сейчас недоступна — на открытке ваши фото в стиле дня') : 'Новая версия по тем же правилам', 5000); };
   $('#bDel').onclick = e => { const b = e.currentTarget; if (!b.dataset.sure){ b.dataset.sure = 1; $('span:last-child', b).textContent = 'Точно? Ещё раз'; setTimeout(() => { delete b.dataset.sure; $('span:last-child', b).textContent = 'Удалить'; }, 4000); return; }
     DAYS = DAYS.filter(d => d.id !== day.id); cloudDelete(day); save(); go('#/diary'); };
   let timer;
