@@ -738,11 +738,15 @@ function imagePrompt(day){
     TECH_EN[v.technique], 'color palette ' + [th.bg, th.accent, th.accent2, ...v.photo.colors.slice(0, 2)].join(' '), 'no text, no faces'].filter(Boolean).join(', ');
 }
 function imageStyle(day){ const v = day.vibe, th = themeFromVibe(v); return ['highly atmospheric, cinematic, detailed', TECH_EN[v.technique], moodOf(v).label.replace('&', 'and').toLowerCase() + ' mood', 'color palette ' + [th.accent, th.accent2, ...v.photo.colors.slice(0, 2)].join(' '), 'no text, no faces'].join(', '); }
+async function refPhoto(day){
+  try { const src = (await photoSources(day))[0]; if (!src) return null; const w0 = src.naturalWidth || src.width, h0 = src.naturalHeight || src.height, k = Math.min(1, 500 / Math.max(w0, h0));
+    const c = makeCanvas(Math.round(w0*k), Math.round(h0*k)); c.getContext('2d').drawImage(src, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.85); } catch { return null; }
+}
 async function generateAIImage(day){
   if (!IMAGE_ENDPOINT) return null;
   const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 90000);
   try {
-    const r = await fetch(IMAGE_ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:imagePrompt(day), text:day.text, style:imageStyle(day)}), signal:ctl.signal});
+    const r = await fetch(IMAGE_ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:imagePrompt(day), text:day.text, style:imageStyle(day), photo: await refPhoto(day)}), signal:ctl.signal});
     const j = await r.json().catch(() => ({}));
     if (!r.ok || !j.image){ console.warn('Генерация картинки не удалась:', j.error || r.status); toast('ИИ-картинка не получилась, картину нарисовала система'); return null; }
     const im = await loadImg(j.image), k = Math.min(1, 1200 / Math.max(im.naturalWidth, im.naturalHeight)), c = makeCanvas(Math.round(im.naturalWidth*k), Math.round(im.naturalHeight*k));
