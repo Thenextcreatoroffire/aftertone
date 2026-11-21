@@ -1035,7 +1035,7 @@ function startSoundtrack(day){
   SOUND = { stop(){ clearInterval(iv); const t = ac.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0, t + 0.6); setTimeout(() => { extra.forEach(n => { try { n.stop(); } catch {} }); master.disconnect(); }, 800); }, day: day.id };
   return SOUND;
 }
-function duck(on){ if (!BUS) return; const t = AC.currentTime; BUS.gain.cancelScheduledValues(t); BUS.gain.setValueAtTime(BUS.gain.value, t); BUS.gain.linearRampToValueAtTime(on ? 0.3 : 1, t + 0.4); }
+function duck(on){ $$('#player audio').forEach(x => x.volume = on ? 0.3 : 1); if (!BUS) return; const t = AC.currentTime; BUS.gain.cancelScheduledValues(t); BUS.gain.setValueAtTime(BUS.gain.value, t); BUS.gain.linearRampToValueAtTime(on ? 0.3 : 1, t + 0.4); }
 
 /* ---------- озвучка ---------- */
 function ruVoices(){ return ('speechSynthesis' in window) ? speechSynthesis.getVoices().filter(v => (v.lang || '').toLowerCase().startsWith('ru')) : []; }
@@ -1072,14 +1072,56 @@ function pickVoice(){
   const vs = topVoices(); let saved = null; try { saved = localStorage.getItem('aftertone.voice'); } catch {}
   return vs.find(v => v.name === saved) || vs[0] || null;
 }
-function speak(day, onState){
-  if (!('speechSynthesis' in window)){ toast('Браузер не поддерживает синтез речи'); return; }
-  if (speechSynthesis.speaking){ speechSynthesis.cancel(); duck(false); onState(false); return; }
-  if (SET.muted){ toast('Звук выключен — включите его значком динамика вверху'); return; }
-  const u = new SpeechSynthesisUtterance(day.description || day.text), voice = pickVoice();
-  if (voice) u.voice = voice; u.lang = 'ru-RU'; u.rate = Math.min(1.1, day.vibe.voice.rate * 0.92); u.pitch = day.vibe.voice.pitch;
+/* Облачный голос: живой голос Google (как в Переводчике). Сначала напрямую, потом через наш воркер (/tts),
+   если не вышло — голосом браузера. */
+let TTS = null, TTS_VIA = 'direct';
+function ttsChunks(text){
+  const out = []; let cur = '';
+  for (const s of String(text).replace(/\s+/g, ' ').trim().split(/(?<=[.!?…;:])\s+/)){
+    const parts = s.length > 180 ? s.split(/(?<=,)\s+|\s+(?=—)/) : [s];
+    for (let p of parts){ while (p.length > 180){ const k = p.lastIndexOf(' ', 180); out.push(p.slice(0, k > 40 ? k : 180)); p = p.slice(k > 40 ? k + 1 : 180); }
+      if ((cur + ' ' + p).trim().length > 180){ if (cur) out.push(cur); cur = p; } else cur = (cur + ' ' + p).trim(); }
+  }
+  if (cur) out.push(cur); return out.slice(0, 12);
+}
+function savedVoice(){ try { return localStorage.getItem('aftertone.voice'); } catch { return null; } }
+function voiceMode(){
+  const saved = savedVoice(), tv = topVoices();
+  if (saved === '__cloud') return 'cloud';
+  if (saved && tv.some(v => v.name === saved)) return 'local';
+  return tv[0] && voiceScore(tv[0]) >= 95 ? 'local' : 'cloud';
+}
+function stopSpeech(){ if (TTS){ const t = TTS; TTS = null; t.stop(); } if ('speechSynthesis' in window) speechSynthesis.cancel(); }
+function speaking(){ return !!TTS || ('speechSynthesis' in window && speechSynthesis.speaking); }
+function speakLocal(text, onState, rate = 1, pitch = 1){
+  if (!('speechSynthesis' in window)){ toast('Браузер не поддерживает озвучку'); onState(false); return; }
+  const u = new SpeechSynthesisUtterance(text), voice = pickVoice();
+  if (voice) u.voice = voice; u.lang = 'ru-RU'; u.rate = rate; u.pitch = pitch;
   u.onend = u.onerror = () => { duck(false); onState(false); };
   duck(true); speechSynthesis.speak(u); onState(true);
+}
+function speakCloud(text, onState, rate = 1){
+  const parts = ttsChunks(text), a = new Audio(); let i = 0, alive = true; a.muted = !!SET.muted;
+  const src = t => TTS_VIA === 'worker' ? IMAGE_ENDPOINT.replace(/\/?$/, '/') + 'tts?text=' + encodeURIComponent(t) : 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=ru&q=' + encodeURIComponent(t);
+  const end = () => { if (!alive) return; alive = false; if (TTS === me) TTS = null; duck(false); onState(false); };
+  const play = () => { if (!alive) return; if (i >= parts.length) return end(); a.src = src(parts[i]); a.preservesPitch = true; a.playbackRate = rate; a.play().catch(e => { if (e.name === 'NotAllowedError'){ toast('Браузер не дал включить звук — нажмите ещё раз'); end(); } }); };
+  a.onended = () => { i++; play(); };
+  a.onerror = () => {
+    if (!alive) return;
+    if (TTS_VIA === 'direct' && IMAGE_ENDPOINT){ TTS_VIA = 'worker'; play(); return; }
+    alive = false; if (TTS === me) TTS = null; TTS_VIA = 'direct'; toast('Облачный голос сейчас недоступен — читаю голосом браузера'); speakLocal(text, onState, rate);
+  };
+  const me = { stop(){ alive = false; a.pause(); a.removeAttribute('src'); duck(false); onState(false); } }; TTS = me;
+  duck(true); onState(true); play();
+}
+function speakText(text, onState, rate = 1, pitch = 1){
+  stopSpeech();
+  if (SET.muted){ toast('Звук выключен — включите его значком динамика вверху'); onState(false); return; }
+  return voiceMode() === 'cloud' ? speakCloud(text, onState, clamp(rate, 0.9, 1.05)) : speakLocal(text, onState, rate, pitch);
+}
+function speak(day, onState){
+  if (speaking()){ stopSpeech(); duck(false); onState(false); return; }
+  speakText(day.description || day.text, onState, Math.min(1.1, day.vibe.voice.rate * 0.92), day.vibe.voice.pitch);
 }
 
 /* ---------- фрагмент загруженной песни (хранится только в этом браузере) ---------- */
@@ -1403,7 +1445,7 @@ function viewSettings(){
       </section>
       <section class="card"><h2 class="h-sm">Голос и звук</h2>
         <div class="setrow"><div><div class="b-md" style="color:var(--on)">Музыка при открытии дня</div><div class="b-sm">Песня дня включается сама, если браузер разрешит</div></div>${sw('sAuto', SET.autoplay)}</div>
-        <div class="setrow" style="flex-direction:column;align-items:stretch"><div><div class="b-md" style="color:var(--on)">Голос озвучки</div><div class="b-sm">Три лучших русских голоса из тех, что есть в вашем браузере</div></div>
+        <div class="setrow" style="flex-direction:column;align-items:stretch"><div><div class="b-md" style="color:var(--on)">Голос озвучки</div><div class="b-sm">Живой голос Google или лучшие голоса вашего браузера</div></div>
           <div class="row" style="gap:8px"><select class="field" id="sVoice" aria-label="Голос озвучки" style="flex:1"></select><button class="btn sec sm" id="sVoiceT">${ms('play_arrow')}Послушать</button></div></div>
       </section>
       <section class="card"><h2 class="h-sm">Картина дня</h2>
@@ -1426,10 +1468,11 @@ function viewSettings(){
   toggle('sFx', on => { SET.fx = on; saveSet(); FX.on = on; if (on){ FX.id = null; applyTheme(latest()); } else { FX.list = []; FX.x?.clearRect(0, 0, FX.cv.width, FX.cv.height); } });
   toggle('sAi', on => { SET.ai = on; saveSet(); });
   toggle('sAuto', on => { SET.autoplay = on; saveSet(); });
-  const fill = () => { const vs = topVoices(), cur = pickVoice(), sel = $('#sVoice'); if (!sel) return; sel.innerHTML = vs.length ? vs.map((v, k) => `<option value="${esc(v.name)}" ${cur && v.name === cur.name ? 'selected' : ''}>${esc(voiceLabel(v))}${k === 0 && vs.length > 1 ? ' (рекомендуем)' : ''}</option>`).join('') : '<option>голос браузера</option>'; };
+  const fill = () => { const vs = topVoices(), mode = voiceMode(), cur = pickVoice(), sel = $('#sVoice'); if (!sel) return;
+    sel.innerHTML = `<option value="__cloud" ${mode === 'cloud' ? 'selected' : ''}>Google — живой голос, через интернет${voiceScore(vs[0] || { name: '' }) < 95 ? ' (рекомендуем)' : ''}</option>` + vs.map(v => `<option value="${esc(v.name)}" ${mode === 'local' && cur && v.name === cur.name ? 'selected' : ''}>${esc(voiceLabel(v))}${voiceScore(v) >= 95 ? ' (рекомендуем)' : ''}</option>`).join(''); };
   fill(); if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = fill;
-  $('#sVoice').onchange = e => { try { localStorage.setItem('aftertone.voice', e.target.value); } catch {} speechSynthesis.cancel(); };
-  $('#sVoiceT').onclick = () => { if (!('speechSynthesis' in window)) return toast('Браузер не умеет озвучивать текст'); speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance('Сегодня был тихий вечер. Город светился мягко, и всё казалось чуть ближе.'); const v = pickVoice(); if (v) u.voice = v; u.lang = 'ru-RU'; u.rate = 0.95; speechSynthesis.speak(u); };
+  $('#sVoice').onchange = e => { try { localStorage.setItem('aftertone.voice', e.target.value); } catch {} stopSpeech(); };
+  $('#sVoiceT').onclick = () => { const b = $('#sVoiceT'); if (speaking()){ stopSpeech(); return; } speakText('Сегодня был тихий вечер. Город светился мягко, и всё казалось чуть ближе.', on => b.innerHTML = on ? `${ms('stop')}Стоп` : `${ms('play_arrow')}Послушать`); };
   $('#aiTest').onclick = () => aiCheck($('#aiRes'));
   $('#sExp').onclick = exportDiary;
   if ($('#reset')) $('#reset').onclick = async e => { const b = e.currentTarget; if (!b.dataset.sure){ b.dataset.sure = 1; b.textContent = 'Точно? Ещё раз'; return; }
@@ -1604,7 +1647,7 @@ async function thumb(day){
 }
 let stops = [];
 function loop(fn){ let id, st = performance.now(), alive = true; const tick = n => { if (!alive) return; fn(Math.max(0, (n - st)/1000)); id = requestAnimationFrame(tick); }; id = requestAnimationFrame(tick); stops.push(() => { alive = false; cancelAnimationFrame(id); }); }
-function stopAll(){ stops.forEach(f => f()); stops = []; if (window.speechSynthesis) speechSynthesis.cancel(); stopSoundtrack(); stopAmbient(); exitDay(); duck(false); }
+function stopAll(){ stops.forEach(f => f()); stops = []; stopSpeech(); stopSoundtrack(); stopAmbient(); exitDay(); duck(false); }
 
 /* ---------- голос ---------- */
 
@@ -1667,7 +1710,7 @@ function setMuted(on){
   SET.muted = on; saveSet();
   if (MUTEG && AC){ const t = AC.currentTime; MUTEG.gain.cancelScheduledValues(t); MUTEG.gain.setValueAtTime(MUTEG.gain.value, t); MUTEG.gain.linearRampToValueAtTime(on ? 0 : 1, t + 0.25); }
   $$('audio').forEach(a => a.muted = on);
-  if (on && 'speechSynthesis' in window) speechSynthesis.cancel();
+  if (on) stopSpeech();
   const b = $('#tMute'); if (b){ b.innerHTML = ms(on ? 'volume_off' : 'volume_up'); b.title = b.ariaLabel = on ? 'Включить звук' : 'Выключить звук'; }
   toast(on ? 'Звук сайта выключен' : 'Звук сайта включён', 1800);
 }

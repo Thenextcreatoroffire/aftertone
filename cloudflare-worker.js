@@ -11,7 +11,7 @@ const ALLOWED_ORIGIN = '*';
 const cors = {
   'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
   'Access-Control-Allow-Headers': 'content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
 
 const SYSTEM = `You are a cinematographer. Turn a personal diary entry (any language) into ONE English prompt for an image model
@@ -58,9 +58,38 @@ function dataUrlToBlob(dataUrl) {
   return new Blob([bytes], { type: (head.match(/data:(.*?);/) || [])[1] || 'image/jpeg' });
 }
 
+// Озвучка: живой голос Google (как в Переводчике), без ключей. Текст до ~1500 символов режется на куски по 180.
+function ttsChunks(text){
+  const out = []; let cur = '';
+  for (const s of String(text).replace(/\s+/g, ' ').trim().split(/(?<=[.!?…;:])\s+/)){
+    const parts = s.length > 180 ? s.split(/(?<=,)\s+|\s+(?=—)/) : [s];
+    for (let p of parts){ while (p.length > 180){ const k = p.lastIndexOf(' ', 180); out.push(p.slice(0, k > 40 ? k : 180)); p = p.slice(k > 40 ? k + 1 : 180); }
+      if ((cur + ' ' + p).trim().length > 180){ if (cur) out.push(cur); cur = p; } else cur = (cur + ' ' + p).trim(); }
+  }
+  if (cur) out.push(cur); return out.slice(0, 12);
+}
+async function tts(url, request){
+  const text = (url.searchParams.get('text') || '').slice(0, 1500), lang = url.searchParams.get('lang') || 'ru';
+  if (!text.trim()) return new Response('no text', { status: 400, headers: cors });
+  const cache = caches.default, key = new Request('https://tts.cache/' + lang + '/' + encodeURIComponent(text));
+  const hit = await cache.match(key); if (hit) return new Response(hit.body, { headers: { ...cors, 'Content-Type': 'audio/mpeg', 'Cache-Control': 'public, max-age=86400' } });
+  const bufs = [];
+  for (const part of ttsChunks(text)){
+    const r = await fetch('https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=' + lang + '&q=' + encodeURIComponent(part), { headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://translate.google.com/' } });
+    if (!r.ok) return new Response('tts upstream ' + r.status, { status: 502, headers: cors });
+    bufs.push(new Uint8Array(await r.arrayBuffer()));
+  }
+  const all = new Uint8Array(bufs.reduce((n, b) => n + b.length, 0)); let o = 0; for (const b of bufs){ all.set(b, o); o += b.length; }
+  const res = new Response(all, { headers: { ...cors, 'Content-Type': 'audio/mpeg', 'Cache-Control': 'public, max-age=86400' } });
+  try { await cache.put(key, res.clone()); } catch {}
+  return res;
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
+    const url = new URL(request.url);
+    if (url.pathname.endsWith('/tts')) return tts(url, request);
     if (request.method !== 'POST') return Response.json({ error: 'Only POST' }, { status: 405, headers: cors });
     try {
       const { prompt, text, style, photo, pano } = await request.json();
