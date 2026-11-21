@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&family=Caveat:wght@500&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
-<style>    
+<style>
 @property --bg{syntax:'<color>';inherits:true;initial-value:#131313}
 @property --low{syntax:'<color>';inherits:true;initial-value:#1b1b1b}
 @property --cont{syntax:'<color>';inherits:true;initial-value:#1f1f1f}
@@ -623,7 +623,7 @@ function scene(name, seed){
 /* ---------- хранилище ---------- */
 const KEY = 'aftertone.days.v1';
 let DAYS = [];
-const sessionAudio = new Map();
+const sessionAudio = new Map(), sessionFull = new Set();
 let storageOK = true, warned = false;
 function save(){
   if (!storageOK){ if (!warned){ warned = true; toast('Здесь дни живут только до перезагрузки: предпросмотр не даёт сохранять. Скачайте файл и откройте в браузере, чтобы дни сохранялись.', 6000); } return false; }
@@ -717,8 +717,9 @@ async function prepare(day){
   const v = day.vibe, th = themeFromVibe(v), raw = await photoSources(day);
   const seed = hashStr(day.id) + (day.seedShift || 0) * 7919;
   const base = day.art && day.art.length ? await Promise.all(day.art.map(loadImg)) : [genArt(day, th, seed), genArt(day, th, seed + 101)];
-  const photos = base.map((s, i) => processPhoto(s, v.technique, th, seed + i, 1));
-  const p = { th, photos, raw, seed, v }; prepCache.set(key, p); return p;
+  const isAI = !!(day.art && day.art.length);
+  const photos = base.map((s, i) => processPhoto(s, v.technique, th, seed + i, isAI ? 0.12 : 0.55));
+  const p = { th, photos, raw, seed, v, ai: isAI }; prepCache.set(key, p); return p;
 }
 
 /* ---------- картина дня ----------
@@ -726,9 +727,9 @@ async function prepare(day){
    картина запрашивается у ИИ по промпту из вайба дня. Иначе система рисует её сама:
    сцена по теме записи, палитра из фото и настроения, художественный приём дня. */
 const IMAGE_ENDPOINT = 'https://aftertone-image.jdsss1156.workers.dev/';
-const TECH_EN = { monet:'impressionist oil painting in the style of Claude Monet, soft visible brushstrokes, diffused light',
-  kandinsky:'abstract geometric composition inspired by Wassily Kandinsky, circles, sharp lines, bold shapes', film:'nostalgic 35mm film photograph, warm grain, light leaks, faded colors',
-  minimal:'japanese minimalist illustration, lots of empty space, calm, muted tones', riso:'risograph print, halftone dots, two-color misregistration, vivid poster colors' };
+const TECH_EN = { monet:'soft impressionist painterly light, gentle brushwork, warm glow',
+  kandinsky:'cinematic night lighting, bold contrast, subtle geometric shapes in the composition', film:'shot on 35mm film, warm grain, soft light leaks, nostalgic',
+  minimal:'minimalist composition, lots of negative space, muted calm tones, soft daylight', riso:'vivid festive colors, playful light, subtle halftone print texture' };
 const SCENE_EN = { park:'a park with trees', sea:'the seaside, horizon over water', mountains:'mountain ridges', office:'an office at night, city lights through the window, glowing monitor', room:'a cozy room by the window',
   party:'a festive party with lights and confetti', city:'a city street', field:'an open landscape with soft hills' };
 function imagePrompt(day){
@@ -736,11 +737,12 @@ function imagePrompt(day){
   return [SCENE_EN[T.scene] || SCENE_EN.field, T.season ? T.season + ' season' : '', T.tod ? T.tod : '', T.weather ? T.weather : '', moodOf(v).label.replace('&', 'and').toLowerCase() + ' mood',
     TECH_EN[v.technique], 'color palette ' + [th.bg, th.accent, th.accent2, ...v.photo.colors.slice(0, 2)].join(' '), 'no text, no faces'].filter(Boolean).join(', ');
 }
+function imageStyle(day){ const v = day.vibe, th = themeFromVibe(v); return ['highly atmospheric, cinematic, detailed', TECH_EN[v.technique], moodOf(v).label.replace('&', 'and').toLowerCase() + ' mood', 'color palette ' + [th.accent, th.accent2, ...v.photo.colors.slice(0, 2)].join(' '), 'no text, no faces'].join(', '); }
 async function generateAIImage(day){
   if (!IMAGE_ENDPOINT) return null;
   const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 90000);
   try {
-    const r = await fetch(IMAGE_ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:imagePrompt(day)}), signal:ctl.signal});
+    const r = await fetch(IMAGE_ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:imagePrompt(day), text:day.text, style:imageStyle(day)}), signal:ctl.signal});
     const j = await r.json().catch(() => ({}));
     if (!r.ok || !j.image){ console.warn('Генерация картинки не удалась:', j.error || r.status); toast('ИИ-картинка не получилась, картину нарисовала система'); return null; }
     const im = await loadImg(j.image), k = Math.min(1, 1200 / Math.max(im.naturalWidth, im.naturalHeight)), c = makeCanvas(Math.round(im.naturalWidth*k), Math.round(im.naturalHeight*k));
@@ -892,6 +894,79 @@ function speak(day, onState){
   duck(true); speechSynthesis.speak(u); onState(true);
 }
 
+/* ---------- фрагмент загруженной песни (хранится только в этом браузере) ---------- */
+const ADB = {
+  open(){ return new Promise((res, rej) => { const r = indexedDB.open('aftertone', 1); r.onupgradeneeded = () => r.result.createObjectStore('audio'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async put(k, v){ const db = await this.open(); return new Promise((res, rej) => { const tx = db.transaction('audio', 'readwrite'); tx.objectStore('audio').put(v, k); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); },
+  async get(k){ const db = await this.open(); return new Promise((res, rej) => { const rq = db.transaction('audio').objectStore('audio').get(k); rq.onsuccess = () => res(rq.result || null); rq.onerror = () => rej(rq.error); }); },
+};
+async function makeClip(file){
+  const buf = await file.arrayBuffer(), AC0 = window.AudioContext || window.webkitAudioContext, tmp = new AC0();
+  const audio = await tmp.decodeAudioData(buf); tmp.close();
+  const start = audio.duration > 100 ? 30 : 0, len = Math.min(60, audio.duration - start), sr = 22050;
+  const off = new OfflineAudioContext(1, Math.ceil(len*sr), sr), src = off.createBufferSource(), g = off.createGain();
+  src.buffer = audio; g.gain.setValueAtTime(0, 0); g.gain.linearRampToValueAtTime(1, 1.2); g.gain.setValueAtTime(1, Math.max(1.2, len - 2)); g.gain.linearRampToValueAtTime(0, len);
+  src.connect(g); g.connect(off.destination); src.start(0, start, len);
+  const out = (await off.startRendering()).getChannelData(0), n = out.length, wav = new DataView(new ArrayBuffer(44 + n*2));
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) wav.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); wav.setUint32(4, 36 + n*2, true); w(8, 'WAVE'); w(12, 'fmt '); wav.setUint32(16, 16, true); wav.setUint16(20, 1, true); wav.setUint16(22, 1, true);
+  wav.setUint32(24, sr, true); wav.setUint32(28, sr*2, true); wav.setUint16(32, 2, true); wav.setUint16(34, 16, true); w(36, 'data'); wav.setUint32(40, n*2, true);
+  for (let i = 0; i < n; i++) wav.setInt16(44 + i*2, Math.max(-1, Math.min(1, out[i])) * 0x7fff, true);
+  return new Blob([wav], {type: 'audio/wav'});
+}
+async function songUrl(day){
+  if (sessionAudio.get(day.id)) return sessionAudio.get(day.id);
+  if (day.hasClip){ try { const b = await ADB.get(day.id); if (b){ const u = URL.createObjectURL(b); sessionAudio.set(day.id, u); return u; } } catch {} }
+  return null;
+}
+
+/* ---------- подборка песен под атмосферу дня ---------- */
+const SONGS = {
+  'Тепло': [['Norah Jones','Don\'t Know Why'],['Etta James','At Last'],['Ella Fitzgerald & Louis Armstrong','Dream a Little Dream of Me'],['Chet Baker','I Fall in Love Too Easily'],['Frank Sinatra','Fly Me to the Moon'],['Nat King Cole','L-O-V-E']],
+  'Ностальгия': [['The Beatles','In My Life'],['Fleetwood Mac','Dreams'],['Cigarettes After Sex','Apocalypse'],['Мумий Тролль','Утекай'],['Lana Del Rey','Video Games'],['Nujabes','Aruarian Dance']],
+  'Грусть': [['Ludovico Einaudi','Nuvole Bianche'],['Max Richter','On the Nature of Daylight'],['Ólafur Arnalds','Near Light'],['Radiohead','No Surprises'],['Bon Iver','Holocene'],['Billie Eilish','when the party\'s over']],
+  'Тишина': [['Erik Satie','Gymnopédie No. 1'],['Brian Eno','An Ending (Ascent)'],['Nils Frahm','Says'],['Ryuichi Sakamoto','Merry Christmas Mr. Lawrence'],['Tycho','Awake'],['Bon Iver','Holocene']],
+  'Напряжение': [['Kavinsky','Nightcall'],['Moderat','A New Error'],['Daft Punk','Derezzed'],['Justice','Genesis'],['Hans Zimmer','Time'],['Kraftwerk','Computer Love']],
+  'Радость': [['Earth, Wind & Fire','September'],['Pharrell Williams','Happy'],['Mark Ronson ft. Bruno Mars','Uptown Funk'],['Queen','Don\'t Stop Me Now'],['Kool & The Gang','Celebration'],['Мумий Тролль','Владивосток 2000']],
+  'Вдохновение': [['M83','Midnight City'],['Phoenix','1901'],['Florence + The Machine','Dog Days Are Over'],['Coldplay','Viva la Vida'],['Tame Impala','The Less I Know the Better'],['Tycho','Awake']],
+};
+const SEASON_SONGS = { autumn:['Eva Cassidy','Autumn Leaves'], winter:['Vince Guaraldi Trio','Christmas Time Is Here'], summer:['The Beach Boys','Wouldn\'t It Be Nice'], spring:['The Beatles','Here Comes the Sun'], rain:['Guns N\' Roses','November Rain'], snow:['Frank Sinatra','Let It Snow! Let It Snow! Let It Snow!'] };
+const WHY = { 'Тепло':'тёплый и неспешный', 'Ностальгия':'про то, что хочется вернуть', 'Грусть':'тихий и светлый', 'Тишина':'много воздуха и тишины', 'Напряжение':'ночной ритм и концентрация', 'Радость':'драйв и праздник', 'Вдохновение':'лёгкость и движение' };
+function playlistFor(day){
+  const v = day.vibe, mood = moodOf(v), T = v.textInfo, own = (day.music.label || '').toLowerCase(), R = mulberry32(hashStr(day.id) + (day.seedShift || 0));
+  const notOwn = s => !own.includes(s[1].toLowerCase().slice(0, 10));
+  const pool = (SONGS[mood.short] || SONGS['Вдохновение']).filter(notOwn).sort(() => R() - 0.5);
+  const extra = SEASON_SONGS[T.weather] || SEASON_SONGS[T.season];
+  const list = (extra && notOwn(extra) ? [[...extra, 'то же время года']] : []).concat(pool.map(s => [...s, WHY[mood.short]]));
+  return list.slice(0, 5);
+}
+const q = s => encodeURIComponent(s);
+
+/* ---------- запахи дня ---------- */
+const SCENTS = {
+  autumn: { notes:['опавшие листья','древесина','ваниль','какао'], cook:['Горячее какао с корицей и маршмеллоу','Печёные яблоки с мёдом и орехами'], candle:'печёное яблоко и корица', perfume:'древесно-гурманские: ваниль, табак, сандал, каштан' },
+  winter: { notes:['морозный воздух','хвоя','мандарин','гвоздика'], cook:['Чай с мёдом, лимоном и имбирём','Безалкогольный глинтвейн с апельсином'], candle:'хвоя и мандарин', perfume:'холодные и чистые: альдегиды, ирис, белый мускус' },
+  snow: { notes:['свежий снег','мята','белый чай','мускус'], cook:['Горячий шоколад','Имбирное печенье'], candle:'белый чай и хлопок', perfume:'холодные и чистые: альдегиды, ирис, белый мускус' },
+  rain: { notes:['мокрый асфальт','озон','мох','бергамот'], cook:['Чай с бергамотом','Овсяное печенье с изюмом'], candle:'дождь и кедр', perfume:'свежие озоновые: мох, ирис, ветивер' },
+  spring: { notes:['сирень','мокрая трава','зелёный чай','груша'], cook:['Зелёный чай с жасмином','Клубника со сливками'], candle:'сирень и зелёный чай', perfume:'цветочно-зелёные: пион, ландыш, груша' },
+  summer: { notes:['морская соль','арбуз','солнцезащитный крем','лайм'], cook:['Арбузный салат с фетой и мятой','Домашний лимонад с базиликом'], candle:'морская соль и шалфей', perfume:'акватические: морская соль, цитрус, кокос' },
+  office: { notes:['свежемолотый кофе','бумага','металл','тёмный шоколад'], cook:['Эспрессо и тёмный шоколад 70%','Сэндвич с тостом и сыром на скорую руку'], candle:'кофе и табак', perfume:'кофейно-кожаные: кофе, бергамот, кожа' },
+  party: { notes:['сладкие фрукты','игристое','сахарная вата','малина'], cook:['Фруктовый торт или капкейки','Ягодный лимонад с мятой'], candle:'грейпфрут и личи', perfume:'фруктово-цветочные: личи, малина, пион' },
+  room: { notes:['плед','чай','тёплое дерево','лаванда'], cook:['Чай с чабрецом','Тёплые сырники со сметаной'], candle:'лаванда и кашемир', perfume:'уютные мускусные: кашемир, амбра, лаванда' },
+  sea: { notes:['морская соль','водоросли','цитрус','солнце'], cook:['Креветки с лимоном и чесноком','Холодный чай с персиком'], candle:'морская соль и шалфей', perfume:'акватические: морская соль, цитрус, кокос' },
+  park: { notes:['трава','листья','кора деревьев','ветер'], cook:['Пикник: сэндвичи и чай в термосе','Яблочный штрудель'], candle:'зелёная трава и инжир', perfume:'зелёно-древесные: инжир, кипарис, ветивер' },
+  field: { notes:['ветер','полевые цветы','мёд','сено'], cook:['Блины с мёдом','Травяной чай с мятой'], candle:'полевые цветы и мёд', perfume:'цветочно-медовые: мёд, ромашка, амбра' },
+};
+function scentsFor(day){
+  const T = day.vibe.textInfo, t = day.text.toLowerCase();
+  const base = SCENTS[T.weather] || (['office','party','sea'].includes(T.scene) ? SCENTS[T.scene] : null) || SCENTS[T.season] || SCENTS[T.scene] || SCENTS.field;
+  const s = { ...base, notes: [...base.notes], cook: [...base.cook] };
+  if (/какао/.test(t) && !s.cook.some(c => /какао/i.test(c))) s.cook.unshift('Горячее какао, как в тот день');
+  if (/кофе/.test(t) && !s.notes.includes('свежемолотый кофе')) s.notes.unshift('кофе');
+  if (/чай|чаем/.test(t) && !s.notes.some(n => /чай/.test(n))) s.notes.push('чай');
+  return s;
+}
+
 /* ---------- отрисовка ---------- */
 function drawCover(x, img, ax, ay, aw, ah, scale, px, py){
   const iw = img.width, ih = img.height, s = Math.max(aw/iw, ah/ih) * scale, w = iw*s, h = ih*s;
@@ -912,7 +987,7 @@ function drawPhotoLayer(x, day, P, t, ax, ay, aw, ah){
   if (fadeP > 0 && n > 1){ x.globalAlpha = fadeP; const [s2, px2, py2] = kb(next, 0); drawCover(x, P.photos[next], bx, by, bw, bh, s2, px2, py2); x.globalAlpha = 1; }
   x.restore();
   const beat = t * (v.music.bpm / 60), pulse = 1 + 0.05*Math.pow(1 - (beat % 1), 3);
-  if (v.technique === 'kandinsky'){
+  if (P.ai){ } else if (v.technique === 'kandinsky'){
     const cx = ax + aw*(0.78 + R()*0.1), cy = ay + ah*(0.14 + R()*0.1), rr = aw*0.07;
     x.fillStyle = th.accent3; x.globalAlpha = 0.55; x.beginPath(); x.arc(cx, cy, rr*pulse, 0, 7); x.fill(); x.globalAlpha = 1;
     x.strokeStyle = th.ink; x.lineWidth = 3; x.beginPath(); x.arc(cx, cy, rr*1.45, 0, 7); x.stroke();
@@ -1188,8 +1263,10 @@ async function createDay(input){
     b.say('Рисую картину дня');
     const id = 'd' + Date.now().toString(36);
     const day = { id, date: input.date, createdAt: Date.now(), text: input.text, photos, music, vibe, title, caption, description, v2: 1, rev: 0 };
+    if (input.audio){ b.say('Сохраняю фрагмент песни'); try { await ADB.put(id, await makeClip(input.audio)); day.hasClip = true; } catch (e) { console.warn(e); } }
+    if (IMAGE_ENDPOINT) b.say('Нейросеть рисует день');
     const aiImg = await generateAIImage(day); if (aiImg) day.art = [aiImg];
-    if (input.audio) sessionAudio.set(id, URL.createObjectURL(input.audio));
+    if (input.audio){ sessionAudio.set(id, URL.createObjectURL(input.audio)); sessionFull.add(id); }
     DAYS.push(day); save();
     await new Promise(r => setTimeout(r, 450));
     go('#/day/' + id);
@@ -1203,17 +1280,26 @@ async function viewDay(id){
   topBack('#/diary', 'Назад', `<button class="ibtn" id="tPng" aria-label="Скачать PNG">${ms('ios_share')}</button>`);
   let P = await prepare(day); applyTheme(day);
   const list = sorted(), i = list.findIndex(d => d.id === id), prev = list[i-1], next = list[i+1];
-  const m = day.music, num = dayNum(day);
+  const m = day.music, num = dayNum(day), sUrl = await songUrl(day), pl = playlistFor(day), smell = scentsFor(day);
   const sc = [['warmth','Тепло'],['energy','Энергия'],['tension','Напряжение'],['tempo','Темп']];
   app.innerHTML = `<div class="stack fade-in">
     <section><p class="lb-sm up mut">${fmtLong(day.date).toUpperCase()} • ПАПКА № ${num}</p><h1 class="h-dl" style="margin-top:8px">${esc(day.title)}</h1><p class="hand" style="margin-top:8px">${esc(day.caption)}</p></section>
     <div class="poster"><canvas id="pc" width="1080" height="1350" aria-label="Воспоминание дня: ${esc(day.title)}"></canvas></div>
     <div class="player"><div class="row"><div class="row" style="gap:12px;justify-content:flex-start;min-width:0"><button class="ibtn solid" id="bMusic" aria-label="Включить звук дня"><span class="ms f">play_arrow</span></button>
-        <div style="min-width:0"><div class="h-sm trunc">${sessionAudio.get(day.id) ? esc(m.label) : 'Саундтрек дня'}</div><div class="lb-md mut trunc">${sessionAudio.get(day.id) ? 'ваш аудиофайл' : 'по мотивам: ' + esc(m.label)} • ${day.vibe.music.bpm} bpm${day.vibe.music.minor === true ? ' • минор' : day.vibe.music.minor === false ? ' • мажор' : ''}</div></div></div>
-        <button class="ibtn" id="bVoice" aria-label="Озвучка описания">${ms('record_voice_over')}</button></div>
+        <div style="min-width:0"><div class="h-sm trunc">${sUrl || m.embed ? esc(m.label) : 'Саундтрек дня'}</div><div class="lb-md mut trunc">${sUrl ? (day.hasClip && !sessionFull.has(day.id) ? 'ваш трек • фрагмент 60 с' : 'ваш трек') : m.embed ? esc(m.service) : 'по мотивам: ' + esc(m.label)} • ${day.vibe.music.bpm} bpm${day.vibe.music.minor === true ? ' • минор' : day.vibe.music.minor === false ? ' • мажор' : ''}</div></div></div>
+        <div style="display:flex"><button class="ibtn" id="bSynth" aria-label="Сгенерированный звук дня" title="Звук дня">${ms('graphic_eq')}</button><button class="ibtn" id="bVoice" aria-label="Озвучка описания">${ms('record_voice_over')}</button></div></div>
       <div class="prog"><i id="prog"></i></div><div class="row lb-sm out" style="letter-spacing:0;margin-top:6px"><span id="pcur">кадр 1</span><span>смена каждые ${day.vibe.frameDur.toFixed(1)} с</span></div>
       <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap;justify-content:flex-start">${m.url ? `<a class="btn sec sm" href="${esc(m.url)}" target="_blank" rel="noopener">Оригинал в ${esc(m.service)} ${ms('open_in_new')}</a>` : ''}<label class="row" style="gap:6px;justify-content:flex-start"><span class="lb-md out">Голос</span><select id="voiceSel" class="field" style="height:40px;width:auto;max-width:220px;font-size:13px"></select></label></div>
       <div id="player" style="margin-top:12px"></div></div>
+    <section class="card"><div class="row" style="margin-bottom:4px"><div class="row" style="gap:8px">${ms('queue_music')}<span class="h-sm">Подборка, чтобы вернуться в этот день</span></div></div><p class="b-sm out" style="margin-bottom:8px">Песни с похожей атмосферой: ${esc(moodOf(day.vibe).label.toLowerCase())}</p>
+      <div class="files">${pl.map(([a, t, why]) => `<div style="align-items:center"><span style="min-width:0"><span class="lb-md pri" style="display:block">${esc(t)}</span><span class="lb-md out">${esc(a)} • ${esc(why)}</span></span><span style="display:flex;gap:4px;flex:none"><a class="pill" href="https://open.spotify.com/search/${q(a + ' ' + t)}" target="_blank" rel="noopener">Spotify</a><a class="pill" href="https://www.youtube.com/results?search_query=${q(a + ' ' + t)}" target="_blank" rel="noopener">YouTube</a><a class="pill" href="https://music.yandex.ru/search?text=${q(a + ' ' + t)}" target="_blank" rel="noopener">Яндекс</a></span></div>`).join('')}</div></section>
+    <section class="card"><div class="row" style="gap:8px;justify-content:flex-start;margin-bottom:4px">${ms('local_florist')}<span class="h-sm">Запахи дня</span></div><p class="b-sm out" style="margin-bottom:10px">Чтобы прочувствовать день целиком, а не только увидеть</p>
+      <div class="chips" style="margin-bottom:14px">${smell.notes.map(n => `<span class="chip" style="height:30px">${esc(n)}</span>`).join('')}</div>
+      <div class="bento">
+        <div class="cell w"><span class="lb">${ms('skillet')}Приготовить</span>${smell.cook.slice(0, 2).map(c => `<a class="b-md" style="color:var(--on)" href="https://www.google.com/search?q=${q('рецепт ' + c)}" target="_blank" rel="noopener">${esc(c)} ${ms('open_in_new')}</a>`).join('')}</div>
+        <div class="cell"><span class="lb">${ms('candle')}Свеча</span><a class="h-sm" style="font-size:15px" href="https://www.google.com/search?q=${q('ароматическая свеча ' + smell.candle)}" target="_blank" rel="noopener">${esc(smell.candle)}</a></div>
+        <div class="cell"><span class="lb">${ms('spa')}Парфюм</span><a class="h-sm" style="font-size:15px" href="https://www.google.com/search?q=${q('парфюм ноты ' + smell.perfume.split(':').pop())}" target="_blank" rel="noopener">${esc(smell.perfume)}</a></div>
+      </div></section>
     <section class="card"><div class="row" style="margin-bottom:14px"><div class="row" style="gap:8px">${ms('fingerprint')}<span class="h-sm">Эмоциональный отпечаток</span></div><span class="lb-sm up mut">AURA</span></div>
       <div class="bento" id="bento"></div>
       <div class="row" style="margin:16px 0 8px"><span class="lb-sm up mut">Палитра дня</span><span class="lb-sm out" style="letter-spacing:0">5 экстрактов</span></div><div class="pal" id="pal"></div>
@@ -1241,9 +1327,11 @@ async function viewDay(id){
   side();
   const c = $('#pc'), x = c.getContext('2d');
   loop(t => { drawPoster(x, day, P, t); const n = P.photos.length, dur = day.vibe.frameDur; $('#prog').style.width = ((t % (dur*n)) / (dur*n) * 100).toFixed(1) + '%'; $('#pcur').textContent = `кадр ${Math.floor(t / dur) % n + 1} из ${n}`; });
-  const player = $('#player'), audioUrl = sessionAudio.get(day.id);
+  const player = $('#player'), audioUrl = sUrl;
+  $('#bSynth').onclick = () => { $('audio', player)?.pause(); if (SOUND && SOUND.day === day.id){ stopSoundtrack(); $('#bSynth').innerHTML = ms('graphic_eq'); } else { startSoundtrack(day); $('#bSynth').innerHTML = ms('stop_circle'); } };
   $('#bMusic').onclick = () => {
-    if (audioUrl){ let a = $('audio', player); if (!a){ player.innerHTML = `<audio src="${audioUrl}" controls style="width:100%"></audio>`; a = $('audio', player); } if (a.paused){ a.play(); $('#bMusic').innerHTML = ms('pause', 1); } else { a.pause(); $('#bMusic').innerHTML = ms('play_arrow', 1); } }
+    if (audioUrl){ stopSoundtrack(); let a = $('audio', player); if (!a){ player.innerHTML = `<audio src="${audioUrl}" controls loop style="width:100%"></audio>`; a = $('audio', player); a.onpause = () => $('#bMusic').innerHTML = ms('play_arrow', 1); a.onplay = () => $('#bMusic').innerHTML = ms('pause', 1); } a.paused ? a.play().catch(() => toast('Нажмите ▶ в плеере ниже')) : a.pause(); }
+    else if (m.embed){ if (!$('iframe', player)) player.innerHTML = `<iframe src="${m.embed}" style="width:100%;border:0;border-radius:12px" height="${m.embed.includes('spotify') ? 152 : 220}" allow="autoplay; encrypted-media; clipboard-write" loading="lazy" title="Песня дня"></iframe><p class="b-sm out" style="font-size:12px;margin-top:6px">Если плеер не загрузился, откройте оригинал по кнопке выше.</p>`; }
     else { if (SOUND && SOUND.day === day.id){ stopSoundtrack(); $('#bMusic').innerHTML = ms('play_arrow', 1); } else { startSoundtrack(day); $('#bMusic').innerHTML = ms('pause', 1); } }
   };
   $('#bVoice').onclick = () => speak(day, on => { $('#bVoice').innerHTML = ms(on ? 'stop_circle' : 'record_voice_over'); });
@@ -1254,7 +1342,9 @@ async function viewDay(id){
   const png = () => { const a = document.createElement('a'); a.download = day.title + '.png'; a.href = c.toDataURL('image/png'); a.click(); };
   $('#bPng').onclick = png; $('#tPng').onclick = png;
   $('#bVid').onclick = e => recordVideo(c, day, e.currentTarget);
-  $('#bRe').onclick = async () => { day.seedShift = (day.seedShift || 0) + 1; day.rev++; save(); P = await prepare(day); toast('Новая версия: другие мазки, формы и кадрирование по тем же правилам'); };
+  $('#bRe').onclick = async () => {
+    if (IMAGE_ENDPOINT){ const b = busy('Нейросеть рисует день'); const img = await generateAIImage(day); b.done(); if (img){ day.art = [img]; day.rev++; save(); P = await prepare(day); side(); toast('Новая картина от нейросети'); return; } }
+    day.seedShift = (day.seedShift || 0) + 1; day.rev++; save(); P = await prepare(day); toast('Новая версия картины по тем же правилам'); };
   $('#bDel').onclick = e => { const b = e.currentTarget; if (!b.dataset.sure){ b.dataset.sure = 1; $('span:last-child', b).textContent = 'Точно? Ещё раз'; setTimeout(() => { delete b.dataset.sure; $('span:last-child', b).textContent = 'Удалить'; }, 4000); return; }
     DAYS = DAYS.filter(d => d.id !== day.id); save(); go('#/diary'); };
   let timer;
