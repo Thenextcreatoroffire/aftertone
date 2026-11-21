@@ -733,7 +733,8 @@ const KEY = 'aftertone.days.v1';
 let DAYS = [];
 const sessionAudio = new Map(), sessionFull = new Set();
 let storageOK = true, warned = false;
-function save(){
+function save(){ const r = saveLocal(); scheduleSync(); return r; }
+function saveLocal(){
   if (!storageOK){ if (!warned){ warned = true; toast('Здесь дни живут только до перезагрузки: предпросмотр не даёт сохранять. Скачайте файл и откройте в браузере, чтобы дни сохранялись.', 6000); } return false; }
   try { localStorage.setItem(KEY, JSON.stringify(DAYS)); return true; }
   catch (e) { toast('В браузере закончилось место: день сохранён только до перезагрузки. В рабочей версии хранилище — Supabase.'); return false; }
@@ -1461,7 +1462,7 @@ function topBrand(){
   $('#me').onclick = () => {
     const ex = $('.sheet'); if (ex){ ex.remove(); return; }
     const s = document.createElement('div'); s.className = 'sheet';
-    s.innerHTML = `<div class="h-sm" style="margin-bottom:6px">Прототип Genesis Hack</div>Дни и капсулы хранятся в этом браузере. В рабочей версии — Supabase.<button class="btn sec sm" id="aiTest">Проверить ИИ-картинку</button><div id="aiRes" class="b-sm" style="margin-top:8px"></div><button class="btn sec sm" id="reset">Вернуть демо-дни</button>`;
+    s.innerHTML = `<div class="h-sm" style="margin-bottom:6px">${USER ? esc(USER.email) : 'Aftertone'}</div>${USER ? '<span id="syncSt">' + (syncLabel() || 'Дни сохраняются в облаке') + '</span>' : SUPABASE_KEY ? 'Войдите, чтобы дни сохранялись в облаке и открывались на любом устройстве.' : 'Дни и капсулы хранятся в этом браузере.'}${SUPABASE_KEY ? `<a class="btn sm w" href="#/login" style="margin-top:12px">${USER ? 'Аккаунт' : 'Войти или зарегистрироваться'}</a>` : ''}<button class="btn sec sm" id="aiTest">Проверить ИИ-картинку</button><div id="aiRes" class="b-sm" style="margin-top:8px"></div><button class="btn sec sm" id="reset">Вернуть демо-дни</button>`;
     $('#top').appendChild(s);
     $('#aiTest').onclick = async () => {
       const res = $('#aiRes');
@@ -1552,6 +1553,7 @@ async function viewHome(){
         <div class="body"><h3 class="h-lg">${esc(d.title)}</h3><p class="b-md">${esc(d.description)}</p>
           <div class="mini"><div class="row" style="gap:12px;justify-content:flex-start"><button class="ibtn" id="hv" aria-label="Озвучить запись"><span class="ms f">play_arrow</span></button><div><div class="lb-md pri">Озвучка дня</div><div class="lb-md mut" style="font-size:11px">голос: ${esc(d.vibe.voice.label)}</div></div></div><div class="wave">${bars}</div></div></div></article></section>
     </div><div class="col">
+    ${SUPABASE_KEY && !USER ? `<a class="card row" href="#/login" style="gap:12px;justify-content:flex-start;background:color-mix(in oklab,var(--aura) 14%,var(--low))"><span class="ms" style="color:var(--aura)">cloud_sync</span><span class="b-sm" style="color:var(--on);flex:1">Войдите, чтобы дни сохранялись в облаке и были на всех устройствах</span><span class="ms">chevron_right</span></a>` : ''}
     <a class="card capture" href="#/new"><div style="min-width:0"><div class="row" style="justify-content:flex-start;gap:8px"><span class="ms f pri" style="font-size:18px">edit_note</span><span class="lb-md up" style="color:var(--onv);letter-spacing:.06em">Вечерняя запись</span></div>
       <h2 class="h-sm" style="margin:6px 0 2px">Запечатлеть сегодняшний день</h2><p class="b-sm trunc">Текст, фото и песня, которая звучала</p></div><span class="ibtn">${ms('add')}</span></a>
     <section><div class="row" style="margin-bottom:8px"><span class="h-sm">Недавние настроения</span><span class="lb-md out">Последние ${last14.length} записей</span></div><div class="moods">${pills}</div></section>
@@ -1786,7 +1788,7 @@ async function viewDay(id){
     if (IMAGE_ENDPOINT){ const b = busy('Нейросеть рисует день'); const img = await generateAIImage(day); b.done(); if (img){ day.art = [img]; day.rev++; save(); P = await prepare(day); side(); toast('Новая картина от нейросети'); return; } }
     day.seedShift = (day.seedShift || 0) + 1; day.rev++; save(); P = await prepare(day); toast('Новая версия картины по тем же правилам'); };
   $('#bDel').onclick = e => { const b = e.currentTarget; if (!b.dataset.sure){ b.dataset.sure = 1; $('span:last-child', b).textContent = 'Точно? Ещё раз'; setTimeout(() => { delete b.dataset.sure; $('span:last-child', b).textContent = 'Удалить'; }, 4000); return; }
-    DAYS = DAYS.filter(d => d.id !== day.id); save(); go('#/diary'); };
+    DAYS = DAYS.filter(d => d.id !== day.id); cloudDelete(day); save(); go('#/diary'); };
   let timer;
   $$('input[type=range]').forEach(r => r.oninput = () => {
     day.vibe.scales[r.dataset.k] = r.value / 100; $('#sv-' + r.dataset.k).textContent = r.value;
@@ -1849,14 +1851,14 @@ async function viewCalendar(){
 /* ---------- капсула времени ---------- */
 const CKEY = 'aftertone.capsules.v1';
 let CAPS = [];
-function saveCaps(){ if (!storageOK) return; try { localStorage.setItem(CKEY, JSON.stringify(CAPS)); } catch {} }
+function saveCaps(){ scheduleSync(); if (!storageOK) return; try { localStorage.setItem(CKEY, JSON.stringify(CAPS)); } catch {} }
 function seedCapsules(force){
   let st = null; if (!force){ try { st = JSON.parse(localStorage.getItem(CKEY) || 'null'); } catch {} }
   if (st) { CAPS = st; return; }
   const t = todayISO(), [yy] = t.split('-').map(Number);
   CAPS = [
-    { id:'c1', created:'2026-11-08', open:`${yy + 1}-05-08`, text:'Письмо из осеннего парка. Помни, как было холодно и как грело какао. Если сейчас тяжело — выйди погулять, листья всегда возвращаются.', music:'Frank Sinatra — Fly Me to the Moon' },
-    { id:'c2', created:'2026-05-21', open:t, text:'Шум прибоя в шесть утра, термос с горячим чаем и ощущение, что всё только начинается. Не забывай замедляться.', music:'Ólafur Arnalds — Near Light' },
+    { id:'c1', demo:true, created:'2026-11-08', open:`${yy + 1}-05-08`, text:'Письмо из осеннего парка. Помни, как было холодно и как грело какао. Если сейчас тяжело — выйди погулять, листья всегда возвращаются.', music:'Frank Sinatra — Fly Me to the Moon' },
+    { id:'c2', demo:true, created:'2026-05-21', open:t, text:'Шум прибоя в шесть утра, термос с горячим чаем и ощущение, что всё только начинается. Не забывай замедляться.', music:'Ólafur Arnalds — Near Light' },
   ];
   saveCaps();
 }
@@ -1900,6 +1902,125 @@ function viewCapsule(){
   };
 }
 
+/* ---------- облако: регистрация, вход, синхронизация (Supabase) ----------
+   Без входа сайт работает как раньше: всё хранится в браузере.
+   После входа дни, капсулы, фото, картинки и фрагменты песен синхронизируются с базой,
+   и дневник открывается на любом устройстве. Демо-дни в облако не попадают. */
+const SUPABASE_URL = 'https://poxdtcmspukdxitipsbb.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBveGR0Y21zcHVrZHhpdGlwc2JiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUyNzI4ODMsImV4cCI6MjExMDg0ODg4M30.eWgeuxnzGCpvKPZBOdY2TguSAxeYQOZ_KlOiQxmHYYI';
+let SB = null, USER = null, SYNC = 'off', syncTimer = null, syncing = false;
+const d2b = d => fetch(d).then(r => r.blob());
+const b2d = b => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(b); });
+function setSync(st){ SYNC = st; const el = $('#syncSt'); if (el) el.textContent = syncLabel(); }
+const syncLabel = () => ({ off:'', idle:'Синхронизировано ✓', busy:'Сохраняю в облако…', error:'Не удалось сохранить в облако, попробую ещё раз', offline:'Нет связи с облаком — дни сохранены в браузере' })[SYNC] || '';
+async function sbInit(){
+  if (!SUPABASE_URL || !SUPABASE_KEY) return;
+  try {
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+    SB = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+    const { data } = await SB.auth.getSession(); USER = data.session?.user || null;
+    SB.auth.onAuthStateChange(async (ev, session) => {
+      const was = USER?.id; USER = session?.user || null;
+      if (USER && USER.id !== was){ await pullAll(); if (location.hash === '#/login') go('#/'); else route(); }
+    });
+    if (USER){ await pullAll(); route(); }
+  } catch (e) { console.warn('Supabase недоступен:', e); SB = null; setSync('offline'); }
+}
+function scheduleSync(){ if (!SB || !USER) return; clearTimeout(syncTimer); syncTimer = setTimeout(pushAll, 1200); }
+async function pushAll(){
+  if (!SB || !USER || syncing) return; syncing = true; setSync('busy');
+  try {
+    for (const d of DAYS) if (!d.demo && d._synced !== d.rev) await pushDay(d);
+    const rows = CAPS.filter(c => !c.demo).map(c => ({ user_id: USER.id, id: c.id, data: c, updated_at: new Date().toISOString() }));
+    if (rows.length){ const { error } = await SB.from('capsules').upsert(rows); if (error) throw error; }
+    try { localStorage.setItem(KEY, JSON.stringify(DAYS)); } catch {}
+    setSync('idle');
+  } catch (e) { console.warn('Синхронизация:', e); setSync('error'); clearTimeout(syncTimer); syncTimer = setTimeout(pushAll, 15000); }
+  finally { syncing = false; }
+}
+async function pushDay(d){
+  const uid = USER.id, base = `${uid}/${d.id}`, media = d._media || (d._media = {});
+  const up = async (path, blob, type) => { const { error } = await SB.storage.from('media').upload(path, blob, { upsert: true, contentType: type }); if (error) throw error; media[path] = 1; };
+  const photoPaths = [];
+  for (let i = 0; i < (d.photos || []).length; i++){ const p = `${base}/photo-${i}.jpg`; if (!media[p]) await up(p, await d2b(d.photos[i]), 'image/jpeg'); photoPaths.push(p); }
+  const artPaths = [];
+  for (const a of (d.art || [])){ const p = `${base}/art-${hashStr(a.slice(-400))}.jpg`; if (!media[p]) await up(p, await d2b(a), 'image/jpeg'); artPaths.push(p); }
+  if (d.hasClip && !media[`${base}/clip.wav`]){ try { const b = await ADB.get(d.id); if (b) await up(`${base}/clip.wav`, b, 'audio/wav'); } catch {} }
+  const { photos, art, _media, _synced, ...rest } = d;
+  const { error } = await SB.from('days').upsert({ user_id: uid, id: d.id, date: d.date, data: { ...rest, photoPaths, artPaths }, updated_at: new Date().toISOString() });
+  if (error) throw error;
+  d._synced = d.rev;
+}
+async function hydrate(data){
+  const dl = async p => { const { data: b, error } = await SB.storage.from('media').download(p); if (error) throw error; return b; };
+  const photos = []; for (const p of data.photoPaths || []) photos.push(await b2d(await dl(p)));
+  const art = (data.artPaths || []).length ? [] : null; for (const p of data.artPaths || []) art.push(await b2d(await dl(p)));
+  const _media = {}; [...(data.photoPaths || []), ...(data.artPaths || [])].forEach(p => _media[p] = 1);
+  if (data.hasClip){ const p = `${USER.id}/${data.id}/clip.wav`; try { await ADB.put(data.id, await dl(p)); _media[p] = 1; } catch {} }
+  const { photoPaths, artPaths, ...rest } = data;
+  return { ...rest, photos, art, _media, _synced: data.rev };
+}
+async function pullAll(){
+  if (!SB || !USER) return; setSync('busy');
+  try {
+    const { data: rows, error } = await SB.from('days').select('id,data'); if (error) throw error;
+    const remote = new Map(rows.map(r => [r.id, r.data]));
+    for (const [id, data] of remote){
+      const loc = DAYS.find(x => x.id === id);
+      if (loc && (loc.rev || 0) >= (data.rev || 0) && loc._synced === loc.rev) continue;
+      if (loc && (loc.rev || 0) > (data.rev || 0)) continue;
+      const day = await hydrate(data); prepCache.delete(id + ':' + day.rev);
+      if (loc) Object.assign(loc, day); else DAYS.push(day);
+    }
+    const { data: caps, error: e2 } = await SB.from('capsules').select('id,data'); if (e2) throw e2;
+    for (const r of caps) if (!CAPS.some(c => c.id === r.id)) CAPS.push(r.data);
+    try { localStorage.setItem(KEY, JSON.stringify(DAYS)); localStorage.setItem(CKEY, JSON.stringify(CAPS)); } catch {}
+    setSync('idle');
+    await pushAll();
+  } catch (e) { console.warn('Загрузка из облака:', e); setSync('error'); }
+}
+async function cloudDelete(day){
+  if (!SB || !USER || day.demo) return;
+  try { await SB.from('days').delete().eq('id', day.id); const paths = Object.keys(day._media || {}); if (paths.length) await SB.storage.from('media').remove(paths); } catch (e) { console.warn(e); }
+}
+async function signOut(){
+  if (SB) await SB.auth.signOut();
+  USER = null; DAYS = DAYS.filter(d => d.demo); CAPS = CAPS.filter(c => c.demo);
+  try { localStorage.setItem(KEY, JSON.stringify(DAYS)); localStorage.setItem(CKEY, JSON.stringify(CAPS)); } catch {}
+  prepCache.clear(); thumbCache.clear(); photoThumbCache.clear(); setSync('off');
+  if (!DAYS.length) await seedDemo();
+}
+const AUTH_ERR = m => /Invalid login credentials/i.test(m) ? 'Неверная почта или пароль' : /already registered|already been registered/i.test(m) ? 'Такой аккаунт уже есть — нажмите «Войти»' : /Password should be at least/i.test(m) ? 'Пароль — минимум 6 символов' : /Email not confirmed/i.test(m) ? 'Почта не подтверждена — откройте письмо от Supabase' : /valid email|invalid format/i.test(m) ? 'Проверьте адрес почты' : /rate limit/i.test(m) ? 'Слишком много попыток, подождите минуту' : m;
+function viewLogin(){
+  setTab(''); topBack('#/', 'Вход');
+  if (!SUPABASE_KEY){ app.innerHTML = `<div class="stack fade-in"><section class="card"><p class="b-md">Облако ещё не подключено.</p></section></div>`; return; }
+  app.innerHTML = `<div class="stack fade-in" style="max-width:440px;margin:0 auto">
+    <section><h1 class="h-dl">${USER ? 'Ваш аккаунт' : 'Войти в дневник'}</h1><p class="b-md" style="margin-top:6px">${USER ? esc(USER.email) : 'Чтобы дни сохранялись в облаке и открывались на любом устройстве'}</p></section>
+    ${USER ? `<section class="card"><div class="b-md" id="syncSt" style="color:var(--on)">${syncLabel() || 'Подключено'}</div><p class="b-sm" style="margin-top:6px">Демо-дни остаются только в этом браузере, ваши записи — в облаке.</p></section>
+      <button class="btn sec w" id="out">${ms('logout')}Выйти</button>`
+    : `<section class="card" style="display:flex;flex-direction:column;gap:10px">
+        <input class="field" id="em" type="email" autocomplete="email" placeholder="Почта" aria-label="Почта">
+        <input class="field" id="pw" type="password" autocomplete="current-password" placeholder="Пароль, минимум 6 символов" aria-label="Пароль">
+        <p class="err" id="lerr"></p><p class="b-sm" id="lmsg" style="color:var(--on)"></p>
+        <button class="btn w" id="in">Войти</button>
+        <button class="btn sec w" id="up">Создать аккаунт</button></section>
+      <a class="lb-md mut" href="#/" style="text-align:center">Продолжить без входа</a>`}
+  </div>`;
+  if (USER){ $('#out').onclick = async () => { await signOut(); go('#/'); }; return; }
+  const run = async signup => {
+    const email = $('#em').value.trim(), password = $('#pw').value; $('#lerr').textContent = ''; $('#lmsg').textContent = '';
+    if (!email || !password){ $('#lerr').textContent = 'Введите почту и пароль'; return; }
+    if (!SB){ $('#lerr').textContent = 'Нет связи с облаком. Проверьте интернет и обновите страницу.'; return; }
+    $('#lmsg').textContent = signup ? 'Создаю аккаунт…' : 'Вхожу…';
+    const res = signup ? await SB.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + location.pathname } }) : await SB.auth.signInWithPassword({ email, password });
+    if (res.error){ $('#lmsg').textContent = ''; $('#lerr').textContent = AUTH_ERR(res.error.message); return; }
+    if (signup && !res.data.session){ $('#lmsg').textContent = 'Готово! Мы отправили письмо на ' + email + ' — подтвердите почту и войдите.'; return; }
+    $('#lmsg').textContent = 'Загружаю ваши дни…';
+  };
+  $('#in').onclick = () => run(false); $('#up').onclick = () => run(true);
+  $('#pw').onkeydown = e => { if (e.key === 'Enter') run(false); };
+}
+
 /* ---------- навигация ---------- */
 let curPath = null;
 function go(hash){ curPath = hash; try { if (location.hash !== hash) history.pushState(null, '', hash); } catch {} route(hash); }
@@ -1908,7 +2029,8 @@ async function route(hash){
   hash = hash || location.hash || '#/'; curPath = hash;
   stopAll(); window.scrollTo(0, 0); $('.sheet')?.remove();
   const [, r, id] = (hash.replace(/^#/, '') || '/').split('/');
-  if (r === 'new') viewNew();
+  if (r === 'login') viewLogin();
+  else if (r === 'new') viewNew();
   else if (r === 'day') await viewDay(id);
   else if (r === 'diary' || r === 'feed') await viewDiary();
   else if (r === 'calendar' || r === 'archive') await viewCalendar();
@@ -1932,6 +2054,7 @@ async function route(hash){
   window.addEventListener('hashchange', onNav); window.addEventListener('popstate', onNav);
   if ('speechSynthesis' in window) speechSynthesis.getVoices();
   route();
+  sbInit();
 })();
 </script>
 </body>
