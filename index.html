@@ -1039,9 +1039,38 @@ function duck(on){ if (!BUS) return; const t = AC.currentTime; BUS.gain.cancelSc
 
 /* ---------- озвучка ---------- */
 function ruVoices(){ return ('speechSynthesis' in window) ? speechSynthesis.getVoices().filter(v => (v.lang || '').toLowerCase().startsWith('ru')) : []; }
+/* Голоса: показываем не больше трёх лучших. Нейросетевые (Microsoft Natural, Google) звучат живее всего,
+   затем голоса Apple и Windows; десятки вариантов eSpeak («Russian+male7» и т.п.) сворачиваются в один. */
+const VOICE_RU = { svetlana:'Светлана', dmitry:'Дмитрий', dariya:'Дария', irina:'Ирина', pavel:'Павел', milena:'Милена', yuri:'Юрий', katya:'Катя', ekaterina:'Екатерина', anna:'Анна' };
+const VOICE_MALE = /dmitry|pavel|yuri|male/i;
+function voiceScore(v){
+  const n = v.name;
+  if (/\+|espeak|^russian$/i.test(n.trim())) return /^russian$/i.test(n.trim()) ? 12 : 10;
+  if (/natural|neural/i.test(n)) return 100;
+  if (/online/i.test(n)) return 95;
+  if (/google/i.test(n)) return 90;
+  if (/premium|enhanced|siri/i.test(n)) return 85;
+  if (/milena|yuri|katya/i.test(n)) return 80;
+  if (/irina|pavel|svetlana|dmitry|dariya/i.test(n)) return 70;
+  return 50;
+}
+function voiceLabel(v){
+  const n = v.name, k = Object.keys(VOICE_RU).find(k => n.toLowerCase().includes(k)), g = VOICE_MALE.test(n) ? 'мужской' : 'женский';
+  if (/\+|espeak|^russian$/i.test(n.trim())) return 'Системный голос (роботизированный)';
+  if (/ru-?ru|language|default/i.test(n)) return 'Голос устройства';
+  const brand = /microsoft/i.test(n) ? 'Microsoft' : /google/i.test(n) ? 'Google' : /apple|com\.apple/i.test(v.voiceURI || '') || /milena|yuri|katya/i.test(n) ? 'Apple' : '';
+  const live = voiceScore(v) >= 90 ? ', живой' : '';
+  return k ? `${VOICE_RU[k]} — ${g}${brand ? ', ' + brand : ''}${live}` : brand ? `${brand} — ${g}${live}` : n;
+}
+function topVoices(){
+  const all = ruVoices().map(v => ({ v, s: voiceScore(v) })).sort((a, b) => b.s - a.s), out = [];
+  let robot = false;
+  for (const { v, s } of all){ if (s <= 12){ if (robot) continue; robot = true; } if (out.some(o => voiceLabel(o) === voiceLabel(v))) continue; out.push(v); if (out.length === 3) break; }
+  return out;
+}
 function pickVoice(){
-  const vs = ruVoices(); let saved = null; try { saved = localStorage.getItem('aftertone.voice'); } catch {}
-  return vs.find(v => v.name === saved) || vs.find(v => /natural|online|neural/i.test(v.name)) || vs.find(v => /google/i.test(v.name)) || vs.find(v => /milena|katya|svetlana|dariya|irina/i.test(v.name)) || vs[0] || null;
+  const vs = topVoices(); let saved = null; try { saved = localStorage.getItem('aftertone.voice'); } catch {}
+  return vs.find(v => v.name === saved) || vs[0] || null;
 }
 function speak(day, onState){
   if (!('speechSynthesis' in window)){ toast('Браузер не поддерживает синтез речи'); return; }
@@ -1374,7 +1403,7 @@ function viewSettings(){
       </section>
       <section class="card"><h2 class="h-sm">Голос и звук</h2>
         <div class="setrow"><div><div class="b-md" style="color:var(--on)">Музыка при открытии дня</div><div class="b-sm">Песня дня включается сама, если браузер разрешит</div></div>${sw('sAuto', SET.autoplay)}</div>
-        <div class="setrow" style="flex-direction:column;align-items:stretch"><div><div class="b-md" style="color:var(--on)">Голос озвучки</div><div class="b-sm">Русские голоса, установленные в браузере</div></div>
+        <div class="setrow" style="flex-direction:column;align-items:stretch"><div><div class="b-md" style="color:var(--on)">Голос озвучки</div><div class="b-sm">Три лучших русских голоса из тех, что есть в вашем браузере</div></div>
           <div class="row" style="gap:8px"><select class="field" id="sVoice" aria-label="Голос озвучки" style="flex:1"></select><button class="btn sec sm" id="sVoiceT">${ms('play_arrow')}Послушать</button></div></div>
       </section>
       <section class="card"><h2 class="h-sm">Картина дня</h2>
@@ -1397,7 +1426,7 @@ function viewSettings(){
   toggle('sFx', on => { SET.fx = on; saveSet(); FX.on = on; if (on){ FX.id = null; applyTheme(latest()); } else { FX.list = []; FX.x?.clearRect(0, 0, FX.cv.width, FX.cv.height); } });
   toggle('sAi', on => { SET.ai = on; saveSet(); });
   toggle('sAuto', on => { SET.autoplay = on; saveSet(); });
-  const fill = () => { const vs = ruVoices(), cur = pickVoice(), sel = $('#sVoice'); if (!sel) return; sel.innerHTML = vs.length ? vs.map(v => `<option ${cur && v.name === cur.name ? 'selected' : ''}>${esc(v.name)}</option>`).join('') : '<option>голос браузера</option>'; };
+  const fill = () => { const vs = topVoices(), cur = pickVoice(), sel = $('#sVoice'); if (!sel) return; sel.innerHTML = vs.length ? vs.map((v, k) => `<option value="${esc(v.name)}" ${cur && v.name === cur.name ? 'selected' : ''}>${esc(voiceLabel(v))}${k === 0 && vs.length > 1 ? ' (рекомендуем)' : ''}</option>`).join('') : '<option>голос браузера</option>'; };
   fill(); if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = fill;
   $('#sVoice').onchange = e => { try { localStorage.setItem('aftertone.voice', e.target.value); } catch {} speechSynthesis.cancel(); };
   $('#sVoiceT').onclick = () => { if (!('speechSynthesis' in window)) return toast('Браузер не умеет озвучивать текст'); speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance('Сегодня был тихий вечер. Город светился мягко, и всё казалось чуть ближе.'); const v = pickVoice(); if (v) u.voice = v; u.lang = 'ru-RU'; u.rate = 0.95; speechSynthesis.speak(u); };
