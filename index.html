@@ -842,10 +842,12 @@ const SCENE_EN = { park:'a park with trees', sea:'the seaside, horizon over wate
   party:'a festive party with lights and confetti', city:'a city street', field:'an open landscape with soft hills' };
 function imagePrompt(day){
   const v = day.vibe, T = v.textInfo, th = themeFromVibe(v);
-  return [SCENE_EN[T.scene] || SCENE_EN.field, T.season ? T.season + ' season' : '', T.tod ? T.tod : '', T.weather ? T.weather : '', moodOf(v).label.replace('&', 'and').toLowerCase() + ' mood',
+  return [SCENE_EN[T.scene] || SCENE_EN.field, T.season ? T.season + ' season' : '', T.tod ? T.tod : '', T.weather ? T.weather : '', (MOOD_EN[moodOf(v).short] || 'calm') + ' mood',
     TECH_EN[v.technique], 'color palette ' + [th.bg, th.accent, th.accent2, ...v.photo.colors.slice(0, 2)].join(' '), 'no text, no faces'].filter(Boolean).join(', ');
 }
-function imageStyle(day){ const v = day.vibe, th = themeFromVibe(v); return ['highly atmospheric, cinematic, detailed', TECH_EN[v.technique], moodOf(v).label.replace('&', 'and').toLowerCase() + ' mood', 'color palette ' + [th.accent, th.accent2, ...v.photo.colors.slice(0, 2)].join(' '), 'no text, no faces'].join(', '); }
+const MOOD_EN = { 'Тепло':'warm and calm', 'Напряжение':'tense and focused', 'Радость':'joyful and energetic', 'Ностальгия':'nostalgic and quiet', 'Грусть':'melancholic and quiet', 'Тишина':'still and contemplative', 'Вдохновение':'light and inspired' };
+function imageStyle(day){ const v = day.vibe, th = themeFromVibe(v); return ['highly atmospheric, cinematic, detailed', TECH_EN[v.technique], (MOOD_EN[moodOf(v).short] || 'calm') + ' mood', 'dominant colors: ' + colorWordsEn(th.hue, v.scales), 'no text, no faces'].join(', '); }
+function colorWordsEn(h, sc){ const n = [[20,'crimson'],[45,'coral'],[80,'amber and ochre'],[112,'golden yellow'],[165,'green'],[215,'teal'],[275,'deep blue'],[325,'violet'],[361,'rose pink']].find(([b]) => h < b)[1]; return (sc.energy < 0.4 ? 'muted ' : sc.energy > 0.7 ? 'vivid ' : 'soft ') + n + (sc.warmth > 0.6 ? ' with warm highlights' : sc.warmth < 0.4 ? ' with cold shadows' : ''); }
 async function refPhoto(day){
   try { const src = (await photoSources(day))[0]; if (!src) return null; const w0 = src.naturalWidth || src.width, h0 = src.naturalHeight || src.height, k = Math.min(1, 500 / Math.max(w0, h0));
     const c = makeCanvas(Math.round(w0*k), Math.round(h0*k)); c.getContext('2d').drawImage(src, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.85); } catch { return null; }
@@ -1481,6 +1483,48 @@ function topBack(href, title, right = ''){
 }
 function busy(text){ const b = document.createElement('div'); b.className = 'busy'; b.innerHTML = `<div class="ring"></div><div class="h-md" id="busyT">${esc(text)}</div><div class="lb-sm up mut">собираю воспоминание дня</div>`; document.body.appendChild(b); return { say: t => { $('#busyT').textContent = t; }, done: () => b.remove() }; }
 
+/* ---------- эмоциональная волна ---------- */
+const WAVE_M = {
+  mood:    { name:'Настроение', of: v => clamp(0.5 + (v.scales.warmth - 0.5)*0.7 + (v.scales.energy - 0.5)*0.25 - v.scales.sadness*0.7 - (v.scales.tension - 0.3)*0.3), hi:'светлее', lo:'тяжелее', peak:'Самый светлый день' },
+  energy:  { name:'Энергия',    of: v => v.scales.energy,  hi:'бодрее', lo:'спокойнее', peak:'Самый энергичный день' },
+  warmth:  { name:'Тепло',      of: v => v.scales.warmth,  hi:'теплее', lo:'холоднее', peak:'Самый тёплый день' },
+  tension: { name:'Напряжение', of: v => v.scales.tension, hi:'напряжённее', lo:'спокойнее', peak:'Самый напряжённый день' },
+};
+let waveMetric = 'mood';
+function renderWave(){
+  const box = $('#wave'); if (!box) return;
+  const days = sorted().slice(-10), M = WAVE_M[waveMetric], vals = days.map(d => M.of(d.vibe));
+  const chips = Object.entries(WAVE_M).map(([k, m]) => `<button class="chip ${k === waveMetric ? 'on' : ''}" data-m="${k}" style="height:30px;font-size:12px">${m.name}</button>`).join('');
+  if (days.length < 2){ box.innerHTML = `<div class="h-sm">Эмоциональная волна</div><p class="b-sm" style="margin-top:6px">Запишите хотя бы два дня — и здесь появится волна вашего настроения.</p>`; return; }
+  const W = 320, H = 110, pad = 20, xs = days.map((_, i) => pad + i/(days.length - 1)*(W - 2*pad)), ys = vals.map(v => H - 10 - v*(H - 24));
+  let path = `M${xs[0]},${ys[0]}`; for (let i = 1; i < xs.length; i++){ const dx = (xs[i] - xs[i-1])/2; path += ` C${xs[i-1] + dx},${ys[i-1]} ${xs[i] - dx},${ys[i]} ${xs[i]},${ys[i]}`; }
+  const last = vals.at(-1), prev = vals.at(-2), delta = Math.round((last - prev)*100);
+  const iMax = vals.indexOf(Math.max(...vals)), iMin = vals.indexOf(Math.min(...vals));
+  const r3 = vals.slice(-3), up = r3.length === 3 && r3[2] > r3[1] + 0.02 && r3[1] > r3[0] + 0.02, down = r3.length === 3 && r3[2] < r3[1] - 0.02 && r3[1] < r3[0] - 0.02;
+  const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+  const trend = up ? `${M.name} растёт третий день подряд` : down ? `${M.name} снижается третий день подряд` : Math.abs(delta) < 4 ? `${M.name} держится ровно` : `Последний день ${delta > 0 ? M.hi : M.lo} предыдущего на ${Math.abs(delta)}%`;
+  box.innerHTML = `<div class="row" style="align-items:flex-start"><div><div class="h-sm">Эмоциональная волна</div><div class="lb-md out" style="margin-top:2px">${M.name.toLowerCase()} последних ${days.length} дней</div></div>
+      <div class="lb-md pri" style="display:flex;align-items:center;gap:4px;flex:none">${delta >= 0 ? '+' : '−'}${Math.abs(delta)}%${ms(delta >= 0 ? 'trending_up' : 'trending_down')}</div></div>
+    <div class="chips" style="margin:12px 0 4px;gap:6px">${chips}</div>
+    <div style="position:relative;height:130px;margin-top:8px">
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:110px;overflow:visible" aria-hidden="true">
+        <defs><linearGradient id="wf" x1="0" x2="0" y1="0" y2="1"><stop offset="0" style="stop-color:var(--aura);stop-opacity:.32"/><stop offset="1" style="stop-color:var(--aura);stop-opacity:0"/></linearGradient></defs>
+        <line x1="0" x2="${W}" y1="${H - 10 - 0.5*(H - 24)}" y2="${H - 10 - 0.5*(H - 24)}" style="stroke:var(--outv)" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"/>
+        <line x1="0" x2="${W}" y1="${H - 10 - avg*(H - 24)}" y2="${H - 10 - avg*(H - 24)}" style="stroke:var(--aura)" stroke-opacity=".35" vector-effect="non-scaling-stroke"/>
+        <path d="${path} L${xs.at(-1)},${H} L${xs[0]},${H} Z" fill="url(#wf)"/>
+        <path d="${path}" fill="none" style="stroke:var(--aura)" stroke-width="2.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+      </svg>
+      ${days.map((d, i) => `<a href="#/day/${d.id}" title="${esc(d.title)} — ${M.name.toLowerCase()} ${Math.round(vals[i]*100)}%" aria-label="${esc(d.title)}" style="position:absolute;left:${xs[i]/W*100}%;top:${ys[i]/H*110}px;width:${i === days.length - 1 ? 16 : 12}px;height:${i === days.length - 1 ? 16 : 12}px;transform:translate(-50%,-50%);border-radius:999px;background:${d.vibe.swatch.accent};box-shadow:0 0 0 2px var(--low)${i === days.length - 1 ? ',0 0 0 5px color-mix(in oklab,var(--primary) 35%,transparent)' : ''}"></a>`).join('')}
+      ${days.map((d, i) => `<span class="lb-sm" style="position:absolute;top:116px;left:${xs[i]/W*100}%;transform:translateX(-50%);letter-spacing:0;white-space:nowrap;color:${i === days.length - 1 ? 'var(--primary)' : 'var(--outline)'};${days.length > 7 && i % 2 && i !== days.length - 1 ? 'display:none' : ''}">${shortDate(d.date)}</span>`).join('')}
+    </div>
+    <div class="files" style="margin-top:14px">
+      <div><span>${M.peak}</span><a class="lb-md pri" href="#/day/${days[iMax].id}" style="text-align:right">${esc(days[iMax].title)}</a></div>
+      <div><span>${waveMetric === 'tension' ? 'Самый спокойный' : 'Самый ' + (waveMetric === 'warmth' ? 'холодный' : waveMetric === 'energy' ? 'тихий' : 'тяжёлый')} день</span><a class="lb-md" href="#/day/${days[iMin].id}" style="text-align:right;color:var(--onv)">${esc(days[iMin].title)}</a></div>
+      <div><span>Тренд</span><span>${trend}</span></div>
+    </div>`;
+  $$('[data-m]', box).forEach(b => b.onclick = () => { waveMetric = b.dataset.m; renderWave(); });
+}
+
 /* ---------- главная ---------- */
 async function viewHome(){
   setTab('home'); topBrand();
@@ -1511,15 +1555,12 @@ async function viewHome(){
     <a class="card capture" href="#/new"><div style="min-width:0"><div class="row" style="justify-content:flex-start;gap:8px"><span class="ms f pri" style="font-size:18px">edit_note</span><span class="lb-md up" style="color:var(--onv);letter-spacing:.06em">Вечерняя запись</span></div>
       <h2 class="h-sm" style="margin:6px 0 2px">Запечатлеть сегодняшний день</h2><p class="b-sm trunc">Текст, фото и песня, которая звучала</p></div><span class="ibtn">${ms('add')}</span></a>
     <section><div class="row" style="margin-bottom:8px"><span class="h-sm">Недавние настроения</span><span class="lb-md out">Последние ${last14.length} записей</span></div><div class="moods">${pills}</div></section>
-    <section class="card"><div class="row"><div><div class="h-sm">Эмоциональная волна</div><div class="lb-md out" style="margin-top:2px">Энергия последних ${w7.length} записей</div></div><div class="lb-md pri" style="display:flex;align-items:center;gap:4px">${delta >= 0 ? '+' : '−'}${Math.abs(delta)}%${ms(delta >= 0 ? 'trending_up' : 'trending_down')}</div></div>
-      <svg viewBox="0 0 320 80" preserveAspectRatio="none" style="width:100%;height:96px;overflow:visible;margin-top:8px" aria-label="График энергии по дням"><defs><linearGradient id="wf" x1="0" x2="0" y1="0" y2="1"><stop offset="0" style="stop-color:var(--aura);stop-opacity:.25"/><stop offset="1" style="stop-color:var(--aura);stop-opacity:0"/></linearGradient></defs>
-        <path d="${path} L${lastP[0]},80 L${pts[0][0]},80 Z" fill="url(#wf)"/><path d="${path}" style="stroke:var(--aura)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <circle cx="${lastP[0]}" cy="${lastP[1]}" r="4" style="fill:var(--primary)"/><circle cx="${lastP[0]}" cy="${lastP[1]}" r="8" fill="none" style="stroke:var(--primary)" stroke-opacity=".4" stroke-width="1.5"/></svg>
-      <div class="row lb-sm out" style="letter-spacing:0;margin-top:6px">${w7.map((x, i) => `<span style="${i === w7.length - 1 ? 'color:var(--primary)' : ''}">${shortDate(x.date)}</span>`).join('')}</div></section>
+    <section class="card" id="wave"></section>
     </div>
     <section class="F"><div class="row" style="margin-bottom:8px"><span class="h-sm">Недавние моменты</span><a class="lb-md mut" href="#/diary">Все записи</a></div>
       <div class="list d2">${recent.map(x => { const m = moodOf(x.vibe); return `<a class="item" href="#/day/${x.id}"><img data-photo="${x.id}" alt=""><div class="t"><div class="row"><span class="h-sm trunc" style="font-size:15px">${esc(x.title)}</span><span class="lb-md out" style="flex:none">${shortDate(x.date)}</span></div><span class="b-sm trunc">${esc(x.caption)}</span><span class="lb-md" style="color:var(--onv);margin-top:2px">${m.short} <span class="out">•</span> <span class="out">${TECH[x.vibe.technique].name}</span></span></div></a>`; }).join('')}</div></section>
   </div>`;
+  renderWave();
   const x = $('#fc').getContext('2d');
   loop(t => { drawPhotoLayer(x, d, P, t, 0, 0, 1200, 900); drawGrain(x, P, t, 1200, 900); });
   $('#hv').onclick = e => { e.preventDefault(); speak(d, on => { $('#hv').innerHTML = ms(on ? 'stop' : 'play_arrow', 1); }); };

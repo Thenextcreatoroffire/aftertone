@@ -1,6 +1,7 @@
 // Cloudflare Worker для Aftertone: атмосферная картинка дня (Workers AI, бесплатный лимит).
 // 1) Текстовая модель превращает запись дня (на любом языке) в подробное описание сцены на английском.
-// 2) FLUX.2 [klein] 9B рисует картинку (или широкую панораму для режима 360°, если пришло pano: true) по описанию, опираясь на настоящее фото дня (если оно пришло).
+// 2) FLUX.2 [klein] 9B рисует картинку с опорой на фото дня.
+//    Запасные: Pollinations (бесплатно, без ключа) и FLUX.1 schnell. по описанию, опираясь на настоящее фото дня (если оно пришло).
 //    Если эта модель недоступна или лимит исчерпан — запасной вариант FLUX.1 schnell.
 // Нужна привязка Workers AI с именем переменной AI (Settings → Bindings → Workers AI).
 
@@ -13,10 +14,15 @@ const cors = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const SYSTEM = `You turn a personal diary entry (any language) into ONE English prompt for an image model.
-Describe a single concrete, realistic scene that recreates the atmosphere of that day: the place, time of day, season,
-weather, light, key objects and small sensory details from the entry, colors and textures, the emotional mood.
-People only from behind or far away, no faces, no text, no logos. 60-90 words. Output only the prompt, nothing else.`;
+const SYSTEM = `You are a cinematographer. Turn a personal diary entry (any language) into ONE English prompt for an image model
+that recreates how that day FELT. Describe a single concrete, believable scene:
+- the place and what surrounds it, time of day, season, weather;
+- the light (direction, colour, softness), atmosphere (mist, steam, snowfall, dust in sunbeams), textures;
+- 2-4 small sensory details mentioned in the entry (a mug of cocoa, wet leaves, city lights, confetti...);
+- camera: framing, lens and depth of field, e.g. "35mm, shallow depth of field, eye level";
+- the emotional mood in visual terms (cosy, lonely, electric, nostalgic...).
+People only from behind, as silhouettes or far away; no faces, no text, no letters, no logos, no watermarks.
+70-110 words, one paragraph. Output only the prompt.`;
 
 async function writeScene(env, text) {
   for (const model of ['@cf/meta/llama-3.3-70b-instruct-fp8-fast', '@cf/meta/llama-3.1-8b-instruct']) {
@@ -29,6 +35,21 @@ async function writeScene(env, text) {
     } catch (e) { /* пробуем следующую модель */ }
   }
   return null;
+}
+
+// Бесплатный запасной вариант без ключа: Pollinations (анонимно — не чаще раза в ~15 секунд)
+async function pollinations(prompt, pano) {
+  const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt.slice(0, 1500)) +
+    `?width=${pano ? 1536 : 1024}&height=768&model=flux&nologo=true&private=true&enhance=false&seed=${Math.floor(Math.random() * 1e9)}`;
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 60000);
+  try {
+    const r = await fetch(url, { signal: ctl.signal });
+    const type = r.headers.get('content-type') || '';
+    if (!r.ok || !type.startsWith('image/')) throw new Error('HTTP ' + r.status);
+    const bytes = new Uint8Array(await r.arrayBuffer());
+    let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  } finally { clearTimeout(t); }
 }
 
 function dataUrlToBlob(dataUrl) {
@@ -46,7 +67,7 @@ export default {
       if (typeof prompt !== 'string' || !prompt.trim()) return Response.json({ error: 'Bad prompt' }, { status: 400, headers: cors });
 
       const scene = (typeof text === 'string' && text.trim()) ? await writeScene(env, text) : null;
-      let finalPrompt = (scene || prompt) + (style ? ', ' + style : '');
+      let finalPrompt = (scene || prompt) + (style ? ', ' + style : '') + ', no text, no watermark';
       if (photo) finalPrompt += ', keep the place, light and composition of the reference photo, recreate its atmosphere';
       if (pano) finalPrompt = 'ultra-wide panoramic view of the whole surroundings, horizon in the middle, continuous scene from left to right, ' + finalPrompt;
       finalPrompt = finalPrompt.slice(0, 2000);
@@ -64,10 +85,11 @@ export default {
         return out.image;
       };
       const hasPhoto = typeof photo === 'string' && photo.startsWith('data:image');
-      // 1) FLUX.2 [klein] с фото дня, 2) без фото, 3) FLUX.1 schnell
+      // 1) FLUX.2 [klein] с фото дня, 2) без фото, 3) Pollinations (бесплатно, без ключа), 4) FLUX.1 schnell
       const tries = [
         ...(hasPhoto ? [['flux-2-klein + фото', () => klein(true)]] : []),
         ['flux-2-klein', () => klein(false)],
+        ['pollinations-flux', () => pollinations(finalPrompt, pano)],
         ['flux-1-schnell', async () => { const o = await env.AI.run('@cf/black-forest-labs/flux-1-schnell', { prompt: finalPrompt, steps: 8 }); if (!o || !o.image) throw new Error('пустой ответ модели'); return o.image; }],
       ];
       for (const [name, run] of tries) {
