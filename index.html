@@ -196,6 +196,7 @@ details.acc{background:var(--low);border-radius:16px}
 .imm-title{font:700 clamp(28px,6vw,48px)/1.08 var(--head);margin:6px 0 8px;text-shadow:0 2px 20px rgba(0,0,0,.4)}
 .imm-hint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.55);backdrop-filter:blur(10px);padding:12px 18px;border-radius:12px;font:500 14px var(--body);z-index:2;text-align:center;max-width:80vw}
 .imm.vr .imm-top{opacity:.35}
+#fx{position:fixed;inset:0;width:100%;height:100%;z-index:25;pointer-events:none}
 .col{display:contents}
 .pl{display:none}
 @media (min-width:1000px){
@@ -597,6 +598,7 @@ function uiTheme(v){
 function applyTheme(day){
   const t = uiTheme(day.vibe), r = document.documentElement.style;
   for (const [k, v] of Object.entries(t)) r.setProperty('--' + k, v);
+  setFx(day);
   let m = document.querySelector('meta[name=theme-color]'); if (!m){ m = document.createElement('meta'); m.name = 'theme-color'; document.head.appendChild(m); } m.content = t.bg;
 }
 
@@ -1185,6 +1187,79 @@ function enterDay(day, P, mode = 'cinema'){
 }
 function exitDay(){ if (IMM){ IMM.stop(); IMM = null; } }
 addEventListener('keydown', e => { if (e.key === 'Escape') exitDay(); });
+
+/* ---------- частицы по теме дня поверх всего сайта ---------- */
+const FX = { kinds: [], list: [], th: null, id: null, cv: null, x: null, last: 0, on: !matchMedia('(prefers-reduced-motion: reduce)').matches };
+const ROMANCE = /(?:^|[^а-я])(?:любл|любим|люблю|влюб|свидан|поцел|романт|обнима|обнял|обняла|сердц|валентин|годовщин|предложени)/i;
+function fxKinds(day){
+  const T = day.vibe.textInfo, t = day.text.toLowerCase().replace(/ё/g, 'е'), s = day.vibe.scales;
+  const love = ROMANCE.test(t);
+  let main;
+  if (T.scene === 'party') main = 'confetti';
+  else if (T.weather === 'rain') main = 'rain';
+  else if (T.weather === 'snow' || T.season === 'winter') main = 'snow';
+  else if (love && !T.season) main = 'hearts';
+  else if (T.season === 'autumn') main = 'leaves';
+  else if (T.season === 'spring') main = 'petals';
+  else if (T.scene === 'sea') main = 'bubbles';
+  else if (T.scene === 'office' || s.tension > 0.6) main = 'squares';
+  else if (T.season === 'summer') main = (T.tod === 'evening' || T.tod === 'night') ? 'fireflies' : 'sparkles';
+  else if (T.tod === 'night') main = 'stars';
+  else if (T.tod === 'evening') main = 'fireflies';
+  else main = 'dust';
+  return love && main !== 'hearts' ? [main, 'hearts'] : [main];
+}
+function fxInit(){
+  if (FX.cv) return; const c = document.createElement('canvas'); c.id = 'fx'; c.setAttribute('aria-hidden', 'true'); document.body.appendChild(c);
+  FX.cv = c; FX.x = c.getContext('2d');
+  const size = () => { c.width = innerWidth; c.height = innerHeight; }; size(); addEventListener('resize', size);
+  const loop = now => { const dt = Math.min(0.05, Math.max(0, (now - (FX.last || now)) / 1000)); FX.last = now; if (!document.hidden) fxDraw(dt, now / 1000); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+}
+function setFx(day){
+  if (!FX.on) return; fxInit();
+  const kinds = fxKinds(day); FX.th = themeFromVibe(day.vibe);
+  if (FX.id === day.id + ':' + day.rev && FX.list.length) return; FX.id = day.id + ':' + day.rev;
+  const area = innerWidth * innerHeight, base = Math.round(clamp(area / 15000, 24, 70));
+  const dens = { rain: 2.2, snow: 1.3, confetti: 1, hearts: 0.5, leaves: 0.6, petals: 0.7, bubbles: 0.6, squares: 0.5, sparkles: 0.6, fireflies: 0.6, stars: 1.2, dust: 0.8 };
+  FX.list = []; FX.kinds = kinds;
+  kinds.forEach((k, i) => { const n = Math.round(base * dens[k] * (i ? 0.35 : 1)); for (let j = 0; j < n; j++) FX.list.push({ k, x: Math.random(), y: Math.random(), z: 0.35 + Math.random()*0.65, a: Math.random()*6.28, s: Math.random(), born: performance.now()/1000 + Math.random()*2 }); });
+}
+function heart(x, cx, cy, r){ x.beginPath(); x.moveTo(cx, cy + r*0.35); x.bezierCurveTo(cx - r*1.1, cy - r*0.45, cx - r*0.45, cy - r*1.15, cx, cy - r*0.45); x.bezierCurveTo(cx + r*0.45, cy - r*1.15, cx + r*1.1, cy - r*0.45, cx, cy + r*0.35); x.fill(); }
+function fxDraw(dt, t){
+  const x = FX.x, W = FX.cv.width, H = FX.cv.height, th = FX.th; x.clearRect(0, 0, W, H); if (!th) return;
+  const pal = [th.accent, th.accent2, ok(0.86, 0.15, 95), ok(0.75, 0.16, 350), ok(0.8, 0.12, 190)];
+  for (const p of FX.list){
+    const k = p.k, z = p.z, fade = clamp(t - p.born, 0, 1);
+    switch (k){
+      case 'rain': p.y += dt*(0.9 + z*0.8); p.x -= dt*0.05; break;
+      case 'snow': p.y += dt*0.035*(0.5 + z); p.x += Math.sin(t*0.7 + p.a)*dt*0.015; break;
+      case 'leaves': case 'petals': p.y += dt*0.045*(0.5 + z); p.x += Math.sin(t*0.5 + p.a)*dt*0.035; p.a += dt*(k === 'leaves' ? 1.2 : 2); break;
+      case 'confetti': p.y += dt*0.07*(0.5 + z); p.a += dt*3.5; p.x += Math.sin(t + p.a)*dt*0.01; break;
+      case 'hearts': case 'bubbles': case 'squares': p.y -= dt*0.03*(0.5 + z); p.x += Math.sin(t*0.6 + p.a)*dt*0.012; p.a += dt*0.4; break;
+      case 'fireflies': p.x += Math.sin(t*0.4 + p.a)*dt*0.02; p.y += Math.cos(t*0.3 + p.a*2)*dt*0.015; break;
+      default: p.y -= dt*0.006*z; p.x += Math.sin(t*0.25 + p.a)*dt*0.004;
+    }
+    if (p.y > 1.05){ p.y = -0.05; p.x = Math.random(); } if (p.y < -0.05){ p.y = 1.05; p.x = Math.random(); } if (p.x < -0.05) p.x = 1.05; if (p.x > 1.05) p.x = -0.05;
+    const px = p.x*W, py = p.y*H;
+    x.globalAlpha = fade * ({ rain: 0.35, snow: 0.8, leaves: 0.75, petals: 0.7, confetti: 0.75, hearts: 0.55, bubbles: 0.45, squares: 0.35, sparkles: 0.3 + 0.5*Math.abs(Math.sin(t*2 + p.a*3)), fireflies: 0.2 + 0.7*Math.abs(Math.sin(t*1.3 + p.a*3)), stars: 0.2 + 0.6*Math.abs(Math.sin(t*1.1 + p.a*5)), dust: 0.15 + 0.25*Math.abs(Math.sin(t*0.8 + p.a)) }[k] ?? 0.5);
+    switch (k){
+      case 'rain': x.strokeStyle = th.mode === 'dark' ? '#cfd9e2' : '#5b6b78'; x.lineWidth = z*1.2; x.beginPath(); x.moveTo(px, py); x.lineTo(px - 3*z, py + 18*z); x.stroke(); break;
+      case 'snow': x.fillStyle = '#fff'; x.beginPath(); x.arc(px, py, 1 + z*2.6, 0, 7); x.fill(); break;
+      case 'leaves': x.save(); x.translate(px, py); x.rotate(p.a); x.fillStyle = ['#e8892b','#f4c84f','#c4501e','#a6542a'][(p.s*4)|0]; x.beginPath(); x.ellipse(0, 0, 4 + 7*z, 2 + 3*z, 0, 0, 7); x.fill(); x.strokeStyle = 'rgba(80,40,10,.35)'; x.lineWidth = 0.8; x.beginPath(); x.moveTo(-4 - 7*z, 0); x.lineTo(4 + 7*z, 0); x.stroke(); x.restore(); break;
+      case 'petals': x.save(); x.translate(px, py); x.rotate(p.a); x.fillStyle = ['#ffc4d6','#ffd9e4','#f7a8c4'][(p.s*3)|0]; x.beginPath(); x.ellipse(0, 0, 3 + 5*z, 2 + 2.5*z, 0, 0, 7); x.fill(); x.restore(); break;
+      case 'confetti': x.save(); x.translate(px, py); x.rotate(p.a); x.fillStyle = pal[(p.s*5)|0]; x.fillRect(-4*z - 1, -1.6*z - 1, 8*z + 2, 3.2*z + 2); x.restore(); break;
+      case 'hearts': x.fillStyle = ['#ff5c8a','#ff8fab', th.accent][(p.s*3)|0]; heart(x, px, py, 5 + 7*z); break;
+      case 'bubbles': x.strokeStyle = th.mode === 'dark' ? 'rgba(220,240,255,.9)' : 'rgba(40,90,130,.8)'; x.lineWidth = 1; x.beginPath(); x.arc(px, py, 2 + 6*z, 0, 7); x.stroke(); break;
+      case 'squares': x.save(); x.translate(px, py); x.rotate(p.a); x.strokeStyle = th.accent; x.lineWidth = 1; const q = 3 + 6*z; x.strokeRect(-q/2, -q/2, q, q); x.restore(); break;
+      case 'sparkles': x.fillStyle = '#fff3c4'; x.save(); x.translate(px, py); x.rotate(t*0.5 + p.a); const r = 2 + 4*z; x.beginPath(); x.moveTo(0, -r); x.lineTo(r*0.25, -r*0.25); x.lineTo(r, 0); x.lineTo(r*0.25, r*0.25); x.lineTo(0, r); x.lineTo(-r*0.25, r*0.25); x.lineTo(-r, 0); x.lineTo(-r*0.25, -r*0.25); x.fill(); x.restore(); break;
+      case 'fireflies': { const g = x.createRadialGradient(px, py, 0, px, py, 8*z + 4); g.addColorStop(0, 'rgba(255,236,140,1)'); g.addColorStop(1, 'rgba(255,236,140,0)'); x.fillStyle = g; x.fillRect(px - 12, py - 12, 24, 24); break; }
+      case 'stars': x.fillStyle = '#fffbe6'; x.beginPath(); x.arc(px, py, 0.6 + z*1.4, 0, 7); x.fill(); break;
+      default: x.fillStyle = th.mode === 'dark' ? '#fff3d6' : '#8a7a5a'; x.beginPath(); x.arc(px, py, 0.8 + z*1.6, 0, 7); x.fill();
+    }
+  }
+  x.globalAlpha = 1;
+}
 
 /* ---------- отрисовка ---------- */
 function drawCover(x, img, ax, ay, aw, ah, scale, px, py){
