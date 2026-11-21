@@ -1782,10 +1782,10 @@ function viewCapsule(){
       <div class="ta" style="background:var(--cont)"><textarea id="ct" placeholder="Что ты хочешь сказать себе через полгода?" style="min-height:110px" aria-label="Текст послания"></textarea></div><p class="err" id="e-ct"></p>
       <input class="field" id="cm" placeholder="Саундтрек момента: исполнитель — название" style="margin-top:10px" aria-label="Песня">
       <label class="row card c2" style="margin-top:10px;padding:12px 14px;position:relative"><span class="row" style="gap:10px;justify-content:flex-start">${ms('calendar_today')}<span class="b-md" style="color:var(--on)">Дата открытия</span></span><span class="lb-md mut" id="cdl">${fmtLong(plus(6))}</span><input type="date" id="cd" value="${plus(6)}" min="${plus(0)}" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer" aria-label="Дата открытия" onclick="try{this.showPicker()}catch(e){}"></label><p class="err" id="e-cd"></p>
-      <button class="btn w" id="seal" style="margin-top:14px">${ms('lock')}Запечатать капсулу</button></section>
+      <button type="button" class="btn w" id="seal" style="margin-top:14px">${ms('lock')}Запечатать капсулу</button></section>
     </div><div class="col">
     <section><div class="row" style="margin-bottom:8px"><span class="h-sm">Запечатанные капсулы</span><span class="lb-md out">${caps.length}</span></div>
-      <div class="list">${caps.map(c => { const n = daysTo(c.open), ready = n <= 0; return `<div class="lock"><div class="ic">${ms(ready ? 'lock_open' : 'lock')}</div><div style="flex:1;min-width:0">
+      <div class="list">${caps.map(c => { const n = daysTo(c.open), ready = n <= 0; return `<div class="lock" data-cap="${c.id}"><div class="ic">${ms(ready ? 'lock_open' : 'lock')}</div><div style="flex:1;min-width:0">
         <div class="h-sm">${esc(makeTitle(analyzeText(c.text)))}</div><div class="lb-md out" style="margin-top:2px">Создано: ${fmtLong(c.created)}</div>
         <div class="b-sm" style="margin-top:6px;color:${ready ? 'var(--primary)' : 'var(--onv)'}">${ready ? 'Откроется сегодня' : `Откроется ${fmtLong(c.open)} (через ${n} дн.)`}</div>
         ${ready ? `<button class="btn sm" data-open="${c.id}" style="margin-top:10px">${ms('auto_awesome')}Открыть капсулу</button><div class="revealed" id="rv-${c.id}" hidden><p class="quote">«${esc(c.text)}»</p>${c.music ? `<div class="lb-md mut" style="margin-top:8px;display:flex;gap:6px;align-items:center">${ms('music_note')}${esc(c.music)}</div>` : ''}</div>` : ''}</div></div>`; }).join('')}</div></section>
@@ -1794,12 +1794,19 @@ function viewCapsule(){
   $('#cd').onchange = $('#cd').oninput = e => { $('#cdl').textContent = e.target.value ? fmtLong(e.target.value) : ''; };
   $$('[data-open]').forEach(b => b.onclick = () => { $('#rv-' + b.dataset.open).hidden = false; b.remove(); });
   $('#seal').onclick = () => {
-    const text = $('#ct').value.trim(), open = $('#cd').value; let bad = false;
-    if (text.length < 10){ $('#e-ct').textContent = 'Напишите послание хотя бы в одно предложение.'; bad = true; } else $('#e-ct').textContent = '';
-    if (!open || open <= t){ $('#e-cd').textContent = 'Выберите дату в будущем.'; bad = true; } else $('#e-cd').textContent = '';
-    if (bad) return;
-    CAPS.push({ id:'c' + Date.now().toString(36), created:t, open, text, music: $('#cm').value.trim() }); saveCaps();
-    toast('Капсула запечатана до ' + fmtLong(open)); viewCapsule();
+    try {
+      const text = $('#ct').value.trim(); let open = $('#cd').value;
+      if (text.length < 3){ $('#e-ct').textContent = 'Напишите хотя бы пару слов себе в будущее.'; $('#ct').focus(); $('#e-ct').scrollIntoView({behavior:'smooth', block:'center'}); return; }
+      $('#e-ct').textContent = '';
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(open || '')) open = plus(6);
+      if (open <= t){ $('#e-cd').textContent = 'Дата открытия должна быть в будущем — выберите другую.'; $('#e-cd').scrollIntoView({behavior:'smooth', block:'center'}); return; }
+      $('#e-cd').textContent = '';
+      const id = 'c' + Date.now().toString(36);
+      CAPS.push({ id, created:t, open, text, music: $('#cm').value.trim() }); saveCaps();
+      viewCapsule();
+      toast('Капсула запечатана до ' + fmtLong(open));
+      const card = document.querySelector(`[data-cap="${id}"]`); if (card){ card.scrollIntoView({behavior:'smooth', block:'center'}); card.style.outline = '2px solid var(--aura)'; setTimeout(() => card.style.outline = '', 2500); }
+    } catch (err) { console.error(err); toast('Не получилось запечатать: ' + (err.message || err)); }
   };
 }
 
