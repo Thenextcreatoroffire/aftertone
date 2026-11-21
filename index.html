@@ -549,7 +549,7 @@ function finalize(v){
   voice.label = s.energy < 0.4 ? 'тихий, медленный, тёплый' : s.energy > 0.65 ? 'живой и быстрый' : s.tension > 0.6 ? 'ровный, собранный' : 'спокойный';
   const rules = [];
   const tempoWord = M.bpm < 85 ? 'медленная' : M.bpm < 112 ? 'средняя по темпу' : 'быстрая';
-  rules.push(`песня ${tempoWord} (${M.bpm} bpm${M.minor === true ? ', минор' : M.minor === false ? ', мажор' : ''}${M.genre ? ', ' + M.genre : ''}) → ${cut === 'cut' ? 'резкий монтаж' : 'плавная смена'} кадров каждые ${frameDur.toFixed(1)} с`);
+  if (M.source === 'none') rules.push(`без песни: темп ${M.bpm} bpm взят из энергии записи → ${cut === 'cut' ? 'резкий монтаж' : 'плавная смена'} кадров каждые ${frameDur.toFixed(1)} с`); else rules.push(`песня ${tempoWord} (${M.bpm} bpm${M.minor === true ? ', минор' : M.minor === false ? ', мажор' : ''}${M.genre ? ', ' + M.genre : ''}) → ${cut === 'cut' ? 'резкий монтаж' : 'плавная смена'} кадров каждые ${frameDur.toFixed(1)} с`);
   if (air > 0.5) rules.push(`${M.minor ? 'минорная' : 'спокойная'} музыка и мало энергии → больше воздуха вокруг фото, приглушённая насыщенность`);
   else if (s.energy > 0.65) rules.push('много энергии → насыщенные цвета, кадр почти без полей');
   rules.push(`на фото доминирует ${P.name} → основа палитры; ${P.lum > 0.56 ? 'светлые' : 'тёмные'} кадры${T.tod === 'night' ? ' и ночь в тексте' : ''} → ${mode === 'dark' ? 'тёмная' : 'светлая'} тема сайта`);
@@ -633,7 +633,7 @@ async function buildVibe(text, photoSources, music){
   const T = analyzeText(text), P = analyzePhotos(photoSources);
   const ai = await analyzeWithAI({text, photoColors:P.colors, music:{label:music.label, bpm:music.bpm, minor:music.minor, genre:music.genre}});
   if (ai){ if (ai.scales) Object.assign(T.scales, ai.scales); if (typeof ai.nostalgia === 'boolean') T.nostalgia = ai.nostalgia; if (ai.hits) Object.assign(T.hits, ai.hits); }
-  const v = { scales: combine(T, P, music), photo: P, music: {bpm:music.bpm, energy:music.energy, minor:music.minor, genre:music.genre},
+  const v = { scales: combine(T, P, music), photo: P, music: {bpm:music.bpm, energy:music.energy, minor:music.minor, genre:music.genre, source:music.source},
     textInfo: { hits:{warm:T.hits.warm, cold:T.hits.cold, tension:T.hits.tension}, tod:T.tod, season:T.season, nostalgia:T.nostalgia, scene: sceneKind(T.raw), weather: weatherOf(T.raw) } };
   finalize(v);
   let title = makeTitle(T, v.scales), { description, caption } = makeStory(T, v, hashStr(text));
@@ -821,7 +821,8 @@ async function generateAIImage(day){
   try {
     const r = await fetch(IMAGE_ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:imagePrompt(day), text:day.text, style:imageStyle(day), photo: await refPhoto(day)}), signal:ctl.signal});
     const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.image){ console.warn('Генерация картинки не удалась:', j.error || r.status); toast('ИИ-картинка не получилась, картину нарисовала система'); return null; }
+    if (!r.ok || !j.image){ const why = String(j.error || ('HTTP ' + r.status)).slice(0, 160); console.warn('Генерация картинки не удалась:', why); toast('ИИ-картинка не получилась (' + why + '). Картину нарисовала система.', 7000); return null; }
+    day.artModel = j.model || 'ИИ'; if (j.warnings && j.warnings.length) console.info('Воркер:', j.warnings);
     const im = await loadImg(j.image), k = Math.min(1, 1200 / Math.max(im.naturalWidth, im.naturalHeight)), c = makeCanvas(Math.round(im.naturalWidth*k), Math.round(im.naturalHeight*k));
     c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.82);
   } catch (e) { console.warn(e); toast('ИИ-картинка не ответила вовремя, картину нарисовала система'); return null; }
@@ -1361,7 +1362,7 @@ function drawPoster(x, day, P, t){
   wrap(x, day.caption, 952).slice(0, 2).forEach((l, i) => x.fillText(l, 64, y + 18 + i*44));
   x.fillStyle = th.muted; x.font = '500 21px Inter, sans-serif';
   x.strokeStyle = th.line; x.beginPath(); x.moveTo(64, 1262); x.lineTo(W - 64, 1262); x.stroke();
-  const mus = (day.music.label || 'песня').slice(0, 38);
+  const mus = (day.music.label || 'звук дня').slice(0, 38);
   x.fillText(`♪ ${mus} · ${v.music.bpm} bpm`, 64, 1298);
   x.textAlign = 'right'; x.fillText(`${TECH[v.technique].name} · ${TECH[v.technique].what}`, W - 64, 1298);
   drawGrain(x, P, t, W, H);
@@ -1421,8 +1422,19 @@ function topBrand(){
   $('#me').onclick = () => {
     const ex = $('.sheet'); if (ex){ ex.remove(); return; }
     const s = document.createElement('div'); s.className = 'sheet';
-    s.innerHTML = `<div class="h-sm" style="margin-bottom:6px">Прототип Genesis Hack</div>Дни и капсулы хранятся в этом браузере. В рабочей версии — Supabase.<button class="btn sec sm" id="reset">Вернуть демо-дни</button>`;
+    s.innerHTML = `<div class="h-sm" style="margin-bottom:6px">Прототип Genesis Hack</div>Дни и капсулы хранятся в этом браузере. В рабочей версии — Supabase.<button class="btn sec sm" id="aiTest">Проверить ИИ-картинку</button><div id="aiRes" class="b-sm" style="margin-top:8px"></div><button class="btn sec sm" id="reset">Вернуть демо-дни</button>`;
     $('#top').appendChild(s);
+    $('#aiTest').onclick = async () => {
+      const res = $('#aiRes');
+      if (!IMAGE_ENDPOINT){ res.textContent = 'ИИ не подключён: в коде пустой IMAGE_ENDPOINT.'; return; }
+      res.textContent = 'Отправляю запрос…'; const t0 = performance.now();
+      try {
+        const r = await fetch(IMAGE_ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:'a cozy autumn park at sunset, warm light, painterly', text:'', style:''})});
+        const j = await r.json().catch(() => ({error: 'ответ не JSON, HTTP ' + r.status}));
+        const sec = ((performance.now() - t0)/1000).toFixed(1);
+        res.innerHTML = j.image ? `Работает ✓ модель: ${esc(j.model || '?')}, ${sec} с${j.warnings && j.warnings.length ? '<br>Предупреждения: ' + esc(j.warnings.join('; ').slice(0, 200)) : ''}<img src="${j.image}" style="width:100%;border-radius:8px;margin-top:8px">` : `Не работает ✗ ${esc(String(j.error || 'HTTP ' + r.status).slice(0, 240))}`;
+      } catch (e) { res.textContent = 'Нет связи с воркером: ' + (e.message || e) + '. Проверьте адрес и что воркер задеплоен.'; }
+    };
     $('#reset').onclick = async e => { const b = e.currentTarget; if (!b.dataset.sure){ b.dataset.sure = 1; b.textContent = 'Свои записи удалятся. Нажми ещё раз'; return; }
       prepCache.clear(); thumbCache.clear(); photoThumbCache.clear(); await seedDemo(); seedCapsules(true); s.remove(); go('#/'); };
   };
@@ -1454,7 +1466,7 @@ async function viewHome(){
     <div class="col">
     <section><div class="row" style="margin-bottom:8px"><span class="h-sm">Главное воспоминание</span><a class="lb-md mut" href="#/day/${d.id}" style="display:inline-flex;align-items:center;gap:2px">Открыть <span class="ms" style="font-size:16px">arrow_forward</span></a></div>
       <article class="feat"><a href="#/day/${d.id}" class="media" style="display:block"><canvas id="fc" width="1200" height="900" aria-label="Фото дня"></canvas>
-        <span class="ovl" style="top:12px;left:12px">${ms('music_note')}<span>${esc(d.music.label)}</span></span>
+        <span class="ovl" style="top:12px;left:12px">${ms('music_note')}<span>${esc(d.music.label || 'Саундтрек дня')}</span></span>
         <div class="row" style="position:absolute;z-index:2;left:12px;right:12px;bottom:12px"><span class="lb-md pri">${fmtLong(d.date)}</span><span class="ovl" style="position:static;background:color-mix(in oklab,var(--highest) 80%,transparent)">${ms(mood.icon, 1)}<span>${mood.label}</span></span></div></a>
         <div class="body"><h3 class="h-lg">${esc(d.title)}</h3><p class="b-md">${esc(d.description)}</p>
           <div class="mini"><div class="row" style="gap:12px;justify-content:flex-start"><button class="ibtn" id="hv" aria-label="Озвучить запись"><span class="ms f">play_arrow</span></button><div><div class="lb-md pri">Озвучка дня</div><div class="lb-md mut" style="font-size:11px">голос: ${esc(d.vibe.voice.label)}</div></div></div><div class="wave">${bars}</div></div></div></article></section>
@@ -1524,8 +1536,8 @@ function viewNew(){
     </div><div class="col">
     <section><div class="row" style="margin-bottom:10px"><span class="h-md">Фотографии</span><span class="lb-md mut" id="pc">0 из 6</span></div>
       <input type="file" id="ph" accept="image/*" multiple hidden><div class="tiles" id="tiles"></div><p class="err" id="e-ph"></p></section>
-    <section><div class="h-md" style="margin-bottom:10px">Фоновая музыка</div>
-      <div class="music"><div class="hd"><div class="ic">${ms('music_note', 1)}</div><div style="min-width:0"><div class="h-sm trunc" id="mt">Песня этого дня</div><div class="b-sm trunc" id="ma">ссылка или аудиофайл</div></div></div>
+    <section><div class="row" style="margin-bottom:10px"><span class="h-md">Фоновая музыка</span><span class="lb-md mut">по желанию</span></div>
+      <div class="music"><div class="hd"><div class="ic">${ms('music_note', 1)}</div><div style="min-width:0"><div class="h-sm trunc" id="mt">Песня этого дня</div><div class="b-sm trunc" id="ma">по желанию: без песни зазвучит саундтрек дня</div></div></div>
         <input class="field" id="link" placeholder="Ссылка: Spotify, YouTube, Яндекс Музыка…" aria-label="Ссылка на песню">
         <input class="field" id="label" placeholder="Исполнитель — название" aria-label="Исполнитель и название">
         <div class="chips" data-k="tempo"><span class="k">Темп</span><button type="button" class="chip" data-v="slow">медленная</button><button type="button" class="chip" data-v="mid">средняя</button><button type="button" class="chip" data-v="fast">быстрая</button></div>
@@ -1537,7 +1549,7 @@ function viewNew(){
     <section class="F"><button class="btn w" id="go">Трансформировать в арт-воспоминание</button><p class="note">Система подберёт палитру, художественный приём, ритм кадров и голос под атмосферу дня</p></section>
   </div>`;
   const steps = () => {
-    const ok1 = $('#text').value.trim().length >= 20, ok2 = state.photos.length > 0, ok3 = !!($('#link').value.trim() || state.audio);
+    const ok1 = $('#text').value.trim().length >= 20, ok2 = state.photos.length > 0, ok3 = ok1 && ok2;
     [[1, ok1], [2, ok2], [3, ok3]].forEach(([n, okk]) => { const s = $(`.step[data-s="${n}"]`); s.classList.toggle('done', okk); });
     const cur = !ok1 ? 1 : !ok2 ? 2 : !ok3 ? 3 : 4; $$('.step').forEach(s => s.classList.toggle('on', +s.dataset.s === cur));
   };
@@ -1564,8 +1576,7 @@ function viewNew(){
     let bad = false;
     if (text.length < 20){ $('#e-text').textContent = 'Напишите о дне хотя бы пару предложений.'; bad = true; }
     if (!state.photos.length){ $('#e-ph').textContent = 'Добавьте хотя бы одно фото.'; bad = true; }
-    if (!link && !state.audio){ $('#e-mu').textContent = 'Добавьте ссылку на песню или аудиофайл.'; bad = true; }
-    else if (link && !/^https?:\/\//i.test(link)){ $('#e-mu').textContent = 'Ссылка должна начинаться с http:// или https://'; bad = true; }
+    if (link && !/^https?:\/\//i.test(link)){ $('#e-mu').textContent = 'Ссылка должна начинаться с http:// или https://'; bad = true; }
     if (bad){ $('.err:not(:empty)')?.scrollIntoView({behavior:'smooth', block:'center'}); return; }
     await createDay({ text, link, label, date: $('#date').value || today, photos: state.photos.map(p => p.file), audio: state.audio, tempo: state.tempo, mode: state.mode });
   };
@@ -1575,7 +1586,8 @@ async function createDay(input){
   try {
     let music;
     if (input.audio){ music = await analyzeAudioFile(input.audio); if (input.label) music.label = input.label; if (input.tempo && TEMPO_CHIP[input.tempo]) Object.assign(music, TEMPO_CHIP[input.tempo]); if (input.mode) music.minor = input.mode === 'minor'; if (input.link) music.url = input.link; }
-    else music = musicFromLink(input.link, input.label, input.tempo, input.mode);
+    else if (input.link) music = musicFromLink(input.link, input.label, input.tempo, input.mode);
+    else { const e = analyzeText(input.text).scales.energy; music = { source:'none', label: input.label || '', service:'саундтрек дня', bpm: input.tempo && TEMPO_CHIP[input.tempo] ? TEMPO_CHIP[input.tempo].bpm : Math.round(66 + e*62), energy: input.tempo && TEMPO_CHIP[input.tempo] ? TEMPO_CHIP[input.tempo].energy : e, minor: input.mode === 'minor' ? true : input.mode === 'major' ? false : null, genre: null }; }
     b.say('Смотрю фото');
     const imgs = await Promise.all(input.photos.slice(0, 6).map(f => loadImg(URL.createObjectURL(f))));
     const photos = imgs.map(im => { const k = Math.min(1, 1080 / Math.max(im.naturalWidth, im.naturalHeight)); const c = makeCanvas(Math.round(im.naturalWidth*k), Math.round(im.naturalHeight*k)); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.8); });
@@ -1622,7 +1634,7 @@ async function viewDay(id){
     <div class="col sticky">
     <div class="poster"><canvas id="pc" width="1080" height="1350" aria-label="Воспоминание дня: ${esc(day.title)}"></canvas></div>
     <div class="player"><div class="row"><div class="row" style="gap:12px;justify-content:flex-start;min-width:0"><button class="ibtn solid" id="bMusic" aria-label="Включить звук дня"><span class="ms f">play_arrow</span></button>
-        <div style="min-width:0"><div class="h-sm trunc">${sUrl || m.embed ? esc(m.label) : 'Саундтрек дня'}</div><div class="lb-md mut trunc">${sUrl ? (day.hasClip && !sessionFull.has(day.id) ? 'ваш трек • фрагмент 60 с' : 'ваш трек') : m.embed ? esc(m.service) : 'по мотивам: ' + esc(m.label)} • ${day.vibe.music.bpm} bpm${day.vibe.music.minor === true ? ' • минор' : day.vibe.music.minor === false ? ' • мажор' : ''}</div></div></div>
+        <div style="min-width:0"><div class="h-sm trunc">${sUrl || m.embed ? esc(m.label) : 'Саундтрек дня'}</div><div class="lb-md mut trunc">${sUrl ? (day.hasClip && !sessionFull.has(day.id) ? 'ваш трек • фрагмент 60 с' : 'ваш трек') : m.embed ? esc(m.service) : (m.label ? 'по мотивам: ' + esc(m.label) : 'сгенерирован под настроение')} • ${day.vibe.music.bpm} bpm${day.vibe.music.minor === true ? ' • минор' : day.vibe.music.minor === false ? ' • мажор' : ''}</div></div></div>
         <div style="display:flex"><button class="ibtn" id="bSynth" aria-label="Сгенерированный звук дня" title="Звук дня">${ms('graphic_eq')}</button><button class="ibtn" id="bVoice" aria-label="Озвучка описания">${ms('record_voice_over')}</button></div></div>
       <div class="prog"><i id="prog"></i></div><div class="row lb-sm out" style="letter-spacing:0;margin-top:6px"><span id="pcur">кадр 1</span><span>смена каждые ${day.vibe.frameDur.toFixed(1)} с</span></div>
       <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap;justify-content:flex-start">${m.url ? `<a class="btn sec sm" href="${esc(m.url)}" target="_blank" rel="noopener">Оригинал в ${esc(m.service)} ${ms('open_in_new')}</a>` : ''}<label class="row" style="gap:6px;justify-content:flex-start"><span class="lb-md out">Голос</span><select id="voiceSel" class="field" style="height:40px;width:auto;max-width:220px;font-size:13px"></select></label></div>
@@ -1672,7 +1684,7 @@ async function viewDay(id){
       <div class="cell"><span class="lb">${ms('music_note')}Из песни</span><span class="b-md" style="color:var(--on)">${v.music.bpm} bpm${v.music.minor === true ? ', минор' : v.music.minor === false ? ', мажор' : ''}${v.music.genre ? ', ' + v.music.genre : ''}</span></div>`;
     $('#rules').innerHTML = v.rules.map(r => `<li>${ms('arrow_forward')}${esc(r)}</li>`).join('');
     $('#pal').innerHTML = [P.th.bg, P.th.accent, P.th.accent2, ...v.photo.colors.slice(0, 2)].map(c => `<div><i style="background:${c}"></i><span>${c}</span></div>`).join('');
-    $('#files').innerHTML = `<div><span>запись.txt</span><span>${day.text.split(/\s+/).length} слов</span></div><div><span>фото</span><span>${day.demo ? 3 : day.photos.length} шт.</span></div><div><span>песня</span><span>${esc(m.service)}</span></div><div><span>картина</span><span>${day.art ? 'ИИ-генерация' : 'нарисована системой'}, ${TECH[v.technique].name}</span></div><div><span>описание</span><span>${day.description.split(/\s+/).length} слов</span></div><div><span>озвучка</span><span>${esc(v.voice.label)}</span></div>`;
+    $('#files').innerHTML = `<div><span>запись.txt</span><span>${day.text.split(/\s+/).length} слов</span></div><div><span>фото</span><span>${day.demo ? 3 : day.photos.length} шт.</span></div><div><span>песня</span><span>${m.source === 'none' ? 'без песни — саундтрек дня' : esc(m.service)}</span></div><div><span>картина</span><span>${day.art ? 'ИИ-генерация' + (day.artModel ? ' (' + esc(day.artModel) + ')' : '') : 'нарисована системой'}, ${TECH[v.technique].name}</span></div><div><span>описание</span><span>${day.description.split(/\s+/).length} слов</span></div><div><span>озвучка</span><span>${esc(v.voice.label)}</span></div>`;
   };
   side();
   const c = $('#pc'), x = c.getContext('2d');

@@ -51,23 +51,33 @@ export default {
       if (pano) finalPrompt = 'ultra-wide panoramic view of the whole surroundings, horizon in the middle, continuous scene from left to right, ' + finalPrompt;
       finalPrompt = finalPrompt.slice(0, 2000);
 
-      // Основная модель: FLUX.2 [klein] 9B с опорой на фото дня
-      try {
+      const warnings = [];
+      const klein = async (withPhoto) => {
         const form = new FormData();
         form.append('prompt', finalPrompt);
         form.append('width', pano ? '1920' : '1024');
-        form.append('height', pano ? '768' : '768');
-        if (typeof photo === 'string' && photo.startsWith('data:image')) form.append('input_image_0', dataUrlToBlob(photo), 'photo.jpg');
+        form.append('height', '768');
+        if (withPhoto) form.append('input_image_0', dataUrlToBlob(photo), 'photo.jpg');
         const wrapped = new Response(form);
-        const out = await env.AI.run('@cf/black-forest-labs/flux-2-klein-9b', {
-          multipart: { body: wrapped.body, contentType: wrapped.headers.get('content-type') },
-        });
-        if (out && out.image) return Response.json({ image: 'data:image/png;base64,' + out.image, prompt: finalPrompt, model: 'flux-2-klein-9b' }, { headers: cors });
-      } catch (e) { /* переходим на запасную модель */ }
-
-      // Запасная модель: FLUX.1 schnell
-      const out = await env.AI.run('@cf/black-forest-labs/flux-1-schnell', { prompt: finalPrompt, steps: 8 });
-      return Response.json({ image: 'data:image/jpeg;base64,' + out.image, prompt: finalPrompt, model: 'flux-1-schnell' }, { headers: cors });
+        const out = await env.AI.run('@cf/black-forest-labs/flux-2-klein-9b', { multipart: { body: wrapped.body, contentType: wrapped.headers.get('content-type') } });
+        if (!out || !out.image) throw new Error('пустой ответ модели');
+        return out.image;
+      };
+      const hasPhoto = typeof photo === 'string' && photo.startsWith('data:image');
+      // 1) FLUX.2 [klein] с фото дня, 2) без фото, 3) FLUX.1 schnell
+      const tries = [
+        ...(hasPhoto ? [['flux-2-klein + фото', () => klein(true)]] : []),
+        ['flux-2-klein', () => klein(false)],
+        ['flux-1-schnell', async () => { const o = await env.AI.run('@cf/black-forest-labs/flux-1-schnell', { prompt: finalPrompt, steps: 8 }); if (!o || !o.image) throw new Error('пустой ответ модели'); return o.image; }],
+      ];
+      for (const [name, run] of tries) {
+        try {
+          const b64 = await run();
+          const mime = b64.startsWith('/9j') ? 'image/jpeg' : 'image/png';
+          return Response.json({ image: `data:${mime};base64,` + b64, prompt: finalPrompt, model: name, warnings }, { headers: cors });
+        } catch (e) { warnings.push(name + ': ' + (e && e.message ? e.message : String(e))); }
+      }
+      return Response.json({ error: 'все модели не ответили — ' + warnings.join(' | ') }, { status: 502, headers: cors });
     } catch (e) {
       return Response.json({ error: String(e) }, { status: 500, headers: cors });
     }
