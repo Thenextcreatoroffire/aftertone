@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Aftertone — дневник атмосферы дня</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23101418'/%3E%3Cg transform='translate(2 0)'%3E%3Ccircle cx='10' cy='16' r='5.5' fill='%239fc4e8'/%3E%3Cpath d='M16.2 9.2a9.5 9.5 0 0 1 0 13.6' fill='none' stroke='%239fc4e8' stroke-width='2.6' stroke-linecap='round' opacity='.75'/%3E%3Cpath d='M20.6 4.8a15.6 15.6 0 0 1 0 22.4' fill='none' stroke='%239fc4e8' stroke-width='2.6' stroke-linecap='round' opacity='.45'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&family=Caveat:wght@500&display=swap" rel="stylesheet">
@@ -35,7 +36,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .ms.f{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24}
 .app{position:relative;z-index:1;max-width:560px;margin:0 auto;min-height:100vh;padding:0 20px 120px}
 .top{position:sticky;top:0;z-index:30;height:56px;display:flex;align-items:center;justify-content:space-between;background:color-mix(in oklab,var(--bg) 88%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);margin:0 -20px;padding:0 20px}
-.brand{font:700 15px var(--head);letter-spacing:.32em;color:var(--primary)}
+.brand{font:700 15px var(--head);letter-spacing:.32em;color:var(--primary);display:inline-flex;align-items:center;gap:10px}
+.brand .logo{color:var(--aura);flex:none}
+.dsk{display:none!important}
+.setrow{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0 0;margin-top:14px;border-top:1px solid color-mix(in oklab,var(--outv) 45%,transparent)}
+.card>h2+.setrow{border-top:0;margin-top:4px}
+.sw{width:46px;height:28px;border-radius:999px;background:var(--high);position:relative;flex:none;transition:background .2s;cursor:pointer}
+.sw::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--outline);transition:transform .2s,background .2s}
+.sw[aria-checked=true]{background:var(--aura)}
+.sw[aria-checked=true]::after{transform:translateX(18px);background:#fff}
+select.field{appearance:auto;cursor:pointer}
 .top .l{display:flex;align-items:center;gap:6px;font:600 17px/22px var(--head);color:var(--primary)}
 .ibtn{width:44px;height:44px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:var(--on)}
 .ibtn.solid{background:var(--primary);color:var(--on-primary);width:36px;height:36px}
@@ -215,6 +225,19 @@ details.acc{background:var(--low);border-radius:16px}
   .tabs a.plus:hover{background:var(--primary);opacity:.9}
   .tabs a.plus.on{background:var(--primary);color:#000}
   .tabs a.plus .pl{display:inline}
+  .tabs .dsk{display:flex!important}
+  .tabs .in{padding-top:22px}
+  .tabs a.side-brand{order:-2;gap:12px;padding:6px 8px 22px;margin-bottom:6px;color:var(--on);background:none!important}
+  .side-brand .logo{color:var(--aura);flex:none;transition:color .6s}
+  .side-brand span{display:flex;flex-direction:column;gap:2px}
+  .side-brand b{font:700 15px var(--head);letter-spacing:.3em;color:var(--primary)}
+  .side-brand small{font:500 11px var(--body);color:var(--outline);letter-spacing:.02em}
+  .top .brand{visibility:hidden}
+  .side-foot{margin-top:auto;flex-direction:column;gap:10px}
+  .side-mood{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:6px!important;background:var(--low);border-radius:14px!important;padding:14px!important}
+  .side-mood .dot{width:10px;height:10px;border-radius:50%;background:var(--aura);box-shadow:0 0 12px var(--aura);flex:none}
+  .side-user{display:flex!important;align-items:center;gap:12px!important;padding:10px!important;border-radius:14px!important}
+  .side-user .ava{width:38px;height:38px;border-radius:50%;background:color-mix(in oklab,var(--aura) 30%,var(--cont));color:var(--on);display:inline-flex;align-items:center;justify-content:center;font:700 15px var(--head);flex:none}
   .stack.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px 40px;align-items:start}
   .stack.two.wideL{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
   .stack.two.dayv{grid-template-columns:min(560px, calc((100vh - 230px) * 0.8)) minmax(0,1fr)}
@@ -246,11 +269,14 @@ details.acc .hint-n{font:500 11px var(--body);color:var(--outline);margin-left:a
   <main id="app"></main>
 </div>
 <nav class="tabs" aria-label="Основное меню"><div class="in">
+  <a href="#/" class="side-brand dsk" aria-label="Aftertone — на главную"><svg class="logo" width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><circle cx="10" cy="16" r="5.5" fill="currentColor"/><path d="M16.2 9.2a9.5 9.5 0 0 1 0 13.6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" opacity=".7"/><path d="M20.6 4.8a15.6 15.6 0 0 1 0 22.4" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" opacity=".4"/></svg><span><b>AFTERTONE</b><small>дневник атмосферы</small></span></a>
   <a href="#/" data-r="home"><span class="ms">home</span>Главная</a>
   <a href="#/diary" data-r="diary"><span class="ms">menu_book</span>Дневник</a>
   <a href="#/new" data-r="new" class="plus" aria-label="Новая запись"><span class="ms">add</span><span class="pl">Новая запись</span></a>
   <a href="#/capsule" data-r="capsule"><span class="ms">hourglass_empty</span>Капсула</a>
   <a href="#/calendar" data-r="calendar"><span class="ms">calendar_month</span>Календарь</a>
+  <a href="#/settings" data-r="settings" class="dsk"><span class="ms">tune</span>Настройки</a>
+  <div class="side-foot dsk" id="sideFoot"></div>
 </div></nav>
 <script>
 'use strict';
@@ -652,9 +678,9 @@ function uiTheme(v){
     aura: ok(0.74, clamp(0.11 + 0.12*s.energy - 0.03*s.sadness, 0.08, 0.22), h) };
 }
 function applyTheme(day){
-  const t = uiTheme(day.vibe), r = document.documentElement.style;
+  const t = SET.theme === 'mono' ? monoTheme() : uiTheme(day.vibe), r = document.documentElement.style;
   for (const [k, v] of Object.entries(t)) r.setProperty('--' + k, v);
-  setFx(day);
+  setFx(day); setFavicon(t.lowest, t.aura); renderSide(day);
   let m = document.querySelector('meta[name=theme-color]'); if (!m){ m = document.createElement('meta'); m.name = 'theme-color'; document.head.appendChild(m); } m.content = t.bg;
 }
 
@@ -1249,7 +1275,90 @@ function exitDay(){ if (IMM){ IMM.stop(); IMM = null; } }
 addEventListener('keydown', e => { if (e.key === 'Escape') exitDay(); });
 
 /* ---------- частицы по теме дня поверх всего сайта ---------- */
-const FX = { kinds: [], list: [], th: null, id: null, cv: null, x: null, last: 0, on: !matchMedia('(prefers-reduced-motion: reduce)').matches };
+/* ---------- настройки, логотип, боковая панель ---------- */
+const plural = (n, a, b, c) => { const m = Math.abs(n) % 100, k = m % 10; return m > 10 && m < 20 ? c : k === 1 ? a : k >= 2 && k <= 4 ? b : c; };
+const SKEY = 'aftertone.settings.v1';
+const SET = Object.assign({ theme: 'day', fx: null, ai: true }, (() => { try { return JSON.parse(localStorage.getItem(SKEY) || '{}'); } catch { return {}; } })());
+function saveSet(){ try { localStorage.setItem(SKEY, JSON.stringify(SET)); } catch {} }
+const LOGO = (s = 28) => `<svg class="logo" width="${s}" height="${s}" viewBox="0 0 32 32" aria-hidden="true"><circle cx="10" cy="16" r="5.5" fill="currentColor"/><path d="M16.2 9.2a9.5 9.5 0 0 1 0 13.6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" opacity=".7"/><path d="M20.6 4.8a15.6 15.6 0 0 1 0 22.4" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" opacity=".4"/></svg>`;
+function setFavicon(bg, fg){
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="${bg}"/><g transform="translate(2 0)"><circle cx="10" cy="16" r="5.5" fill="${fg}"/><path d="M16.2 9.2a9.5 9.5 0 0 1 0 13.6" fill="none" stroke="${fg}" stroke-width="2.6" stroke-linecap="round" opacity=".75"/><path d="M20.6 4.8a15.6 15.6 0 0 1 0 22.4" fill="none" stroke="${fg}" stroke-width="2.6" stroke-linecap="round" opacity=".45"/></g></svg>`;
+  let l = document.querySelector('link[rel=icon]'); if (!l){ l = document.createElement('link'); l.rel = 'icon'; document.head.appendChild(l); }
+  l.type = 'image/svg+xml'; l.href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+}
+function monoTheme(){
+  const h = 250, c = 0.006, L0 = 0.17;
+  return { bg: ok(L0, c, h), lowest: ok(L0 - 0.03, c, h), low: ok(L0 + 0.045, c, h), cont: ok(L0 + 0.075, c, h), high: ok(L0 + 0.125, c, h), highest: ok(L0 + 0.17, c, h),
+    on: ok(0.94, 0.004, h), onv: ok(0.82, 0.006, h), outline: ok(0.66, 0.008, h), outv: ok(0.4, 0.008, h), primary: ok(0.96, 0.004, h), 'on-primary': ok(0.2, 0.004, h), aura: ok(0.82, 0.02, h) };
+}
+let SIDE_DAY = null;
+function renderSide(day){
+  if (day) SIDE_DAY = day; const el = document.getElementById('sideFoot'); if (!el) return;
+  const d = SIDE_DAY, m = d ? moodOf(d.vibe) : null, name = USER ? userName() : '';
+  el.innerHTML = `${m ? `<a class="side-mood" href="#/day/${d.id}"><span class="lb-sm up out">Тон сайта сейчас</span><span class="row" style="gap:10px;justify-content:flex-start"><span class="dot"></span><span class="b-sm" style="color:var(--on);line-height:18px">${esc(m.label)}</span></span><span class="lb-sm out trunc">${esc(d.title)}</span></a>` : ''}
+    ${SUPABASE_KEY ? `<a class="side-user" href="#/login"><span class="ava">${USER ? esc(name.slice(0, 1).toUpperCase()) : ms('person')}</span><span style="min-width:0;flex:1"><span class="b-sm trunc" style="display:block;color:var(--on);font-weight:600">${USER ? esc(name) : 'Войти'}</span><span class="lb-sm out trunc" style="display:block">${USER ? (syncLabel() || 'в облаке') : 'облако и все устройства'}</span></span></a>` : ''}`;
+}
+async function aiCheck(res){
+  if (!IMAGE_ENDPOINT){ res.textContent = 'ИИ не подключён: в коде пустой IMAGE_ENDPOINT.'; return; }
+  res.textContent = 'Отправляю запрос…'; const t0 = performance.now();
+  try {
+    const r = await fetch(IMAGE_ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:'a cozy autumn park at sunset, warm light, painterly', text:'', style:''})});
+    const j = await r.json().catch(() => ({error: 'ответ не JSON, HTTP ' + r.status}));
+    const sec = ((performance.now() - t0)/1000).toFixed(1);
+    res.innerHTML = j.image ? `Работает ✓ модель: ${esc(j.model || '?')}, ${sec} с${j.warnings && j.warnings.length ? '<br>Предупреждения: ' + esc(j.warnings.join('; ').slice(0, 200)) : ''}<img src="${j.image}" style="width:100%;max-width:320px;border-radius:8px;margin-top:8px;display:block">` : `Не работает ✗ ${esc(String(j.error || 'HTTP ' + r.status).slice(0, 240))}`;
+  } catch (e) { res.textContent = 'Нет связи с воркером: ' + (e.message || e) + '. Проверьте адрес и что воркер задеплоен.'; }
+}
+function exportDiary(){
+  const data = { app: 'Aftertone', exported: new Date().toISOString(), days: DAYS.filter(d => !d.demo).map(({ _media, _synced, ...d }) => d), capsules: CAPS.filter(c => !c.demo) };
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' })); a.download = 'aftertone-' + todayISO() + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function viewSettings(){
+  setTab('settings'); topBrand(); applyTheme(latest());
+  const own = DAYS.filter(d => !d.demo).length, caps = CAPS.filter(c => !c.demo).length;
+  const sw = (id, on) => `<button class="sw" id="${id}" role="switch" aria-checked="${on}"></button>`;
+  const fxOn = SET.fx ?? !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  app.innerHTML = `<div class="stack two fade-in">
+    <section class="F"><div class="lb-md up mut">Aftertone</div><h1 class="h-dl" style="margin-top:4px">Настройки</h1></section>
+    <div class="col">
+      <section class="card"><h2 class="h-sm">Внешний вид</h2>
+        <div class="setrow" style="flex-direction:column;align-items:stretch"><div><div class="b-md" style="color:var(--on)">Цвет сайта</div><div class="b-sm">По настроению — сайт перекрашивается под последний день</div></div>
+          <div class="row" style="gap:8px;justify-content:flex-start;flex-wrap:wrap"><button class="chip ${SET.theme === 'day' ? 'on' : ''}" data-th="day">${ms('palette')}По настроению дня</button><button class="chip ${SET.theme === 'mono' ? 'on' : ''}" data-th="mono">${ms('contrast')}Монохром</button></div></div>
+        <div class="setrow"><div><div class="b-md" style="color:var(--on)">Частицы</div><div class="b-sm">Снег, листья, сердечки и другие по теме дня</div></div>${sw('sFx', fxOn)}</div>
+      </section>
+      <section class="card"><h2 class="h-sm">Голос и звук</h2>
+        <div class="setrow" style="flex-direction:column;align-items:stretch"><div><div class="b-md" style="color:var(--on)">Голос озвучки</div><div class="b-sm">Русские голоса, установленные в браузере</div></div>
+          <div class="row" style="gap:8px"><select class="field" id="sVoice" aria-label="Голос озвучки" style="flex:1"></select><button class="btn sec sm" id="sVoiceT">${ms('play_arrow')}Послушать</button></div></div>
+      </section>
+      <section class="card"><h2 class="h-sm">Картина дня</h2>
+        <div class="setrow"><div><div class="b-md" style="color:var(--on)">Рисовать нейросетью</div><div class="b-sm">Если выключить, картина собирается из правил — быстрее и без интернета</div></div>${sw('sAi', SET.ai)}</div>
+        <div class="setrow" style="flex-direction:column;align-items:stretch"><button class="btn sec sm" id="aiTest">${ms('auto_awesome')}Проверить ИИ-картинку</button><div id="aiRes" class="b-sm"></div></div>
+      </section>
+    </div>
+    <div class="col">
+      <section class="card"><h2 class="h-sm">Аккаунт</h2>
+        <div class="setrow"><div style="min-width:0"><div class="b-md trunc" style="color:var(--on)">${USER ? esc(userName()) : 'Вы не вошли'}</div><div class="b-sm trunc">${USER ? esc(USER.email) : 'Дни хранятся только в этом браузере'}</div></div>${SUPABASE_KEY ? `<a class="btn sm ${USER ? 'sec' : ''}" href="#/login">${USER ? 'Открыть' : 'Войти'}</a>` : ''}</div>
+      </section>
+      <section class="card"><h2 class="h-sm">Данные</h2>
+        <div class="setrow"><div><div class="b-md" style="color:var(--on)">Ваши записи</div><div class="b-sm">${own} ${plural(own, 'день', 'дня', 'дней')}, ${caps} ${plural(caps, 'капсула', 'капсулы', 'капсул')}</div></div><button class="btn sec sm" id="sExp" ${own + caps ? '' : 'disabled'}>${ms('download')}Скачать</button></div>
+        ${USER ? '' : `<div class="setrow"><div><div class="b-md" style="color:var(--on)">Демо-дни</div><div class="b-sm">Вернуть примеры, ваши записи в этом браузере удалятся</div></div><button class="btn sec sm" id="reset">Вернуть</button></div>`}
+      </section>
+      <section class="card"><h2 class="h-sm">О проекте</h2><p class="b-sm" style="margin-top:8px">Aftertone — дневник, который сохраняет не то, как выглядел день, а то, как он ощущался. Текст, фото и песня превращаются в цвет, картину, звук и частицы. Genesis Hack 2026, кейс ArtTech.</p></section>
+    </div></div>`;
+  $$('[data-th]').forEach(b => b.onclick = () => { SET.theme = b.dataset.th; saveSet(); $$('[data-th]').forEach(x => x.classList.toggle('on', x === b)); applyTheme(latest()); });
+  const toggle = (id, fn) => { $('#' + id).onclick = e => { const on = e.currentTarget.getAttribute('aria-checked') !== 'true'; e.currentTarget.setAttribute('aria-checked', on); fn(on); }; };
+  toggle('sFx', on => { SET.fx = on; saveSet(); FX.on = on; if (on){ FX.id = null; applyTheme(latest()); } else { FX.list = []; FX.x?.clearRect(0, 0, FX.cv.width, FX.cv.height); } });
+  toggle('sAi', on => { SET.ai = on; saveSet(); });
+  const fill = () => { const vs = ruVoices(), cur = pickVoice(), sel = $('#sVoice'); if (!sel) return; sel.innerHTML = vs.length ? vs.map(v => `<option ${cur && v.name === cur.name ? 'selected' : ''}>${esc(v.name)}</option>`).join('') : '<option>голос браузера</option>'; };
+  fill(); if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = fill;
+  $('#sVoice').onchange = e => { try { localStorage.setItem('aftertone.voice', e.target.value); } catch {} speechSynthesis.cancel(); };
+  $('#sVoiceT').onclick = () => { if (!('speechSynthesis' in window)) return toast('Браузер не умеет озвучивать текст'); speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance('Сегодня был тихий вечер. Город светился мягко, и всё казалось чуть ближе.'); const v = pickVoice(); if (v) u.voice = v; u.lang = 'ru-RU'; u.rate = 0.95; speechSynthesis.speak(u); };
+  $('#aiTest').onclick = () => aiCheck($('#aiRes'));
+  $('#sExp').onclick = exportDiary;
+  if ($('#reset')) $('#reset').onclick = async e => { const b = e.currentTarget; if (!b.dataset.sure){ b.dataset.sure = 1; b.textContent = 'Точно? Ещё раз'; return; }
+    prepCache.clear(); thumbCache.clear(); photoThumbCache.clear(); await seedDemo(); seedCapsules(true); toast('Демо-дни вернулись'); go('#/'); };
+}
+
+const FX = { kinds: [], list: [], th: null, id: null, cv: null, x: null, last: 0, on: SET.fx ?? !matchMedia('(prefers-reduced-motion: reduce)').matches };
 const ROMANCE = /(?:^|[^а-я])(?:любл|любим|люблю|влюб|свидан|поцел|романт|обнима|обнял|обняла|сердц|валентин|годовщин|предложени)/i;
 function fxKinds(day){
   const T = day.vibe.textInfo, t = day.text.toLowerCase().replace(/ё/g, 'е'), s = day.vibe.scales;
@@ -1458,25 +1567,12 @@ async function fillThumbs(root = document){
 /* ---------- шапка и меню ---------- */
 function setTab(r){ $$('.tabs a').forEach(a => a.classList.toggle('on', a.dataset.r === r)); }
 function topBrand(){
-  $('#top').innerHTML = `<span class="brand">AFTERTONE</span><div><button class="ibtn" id="me" aria-label="Профиль">${ms('person')}</button></div>`;
+  $('#top').innerHTML = `<a class="brand" href="#/">${LOGO(22)}<span>AFTERTONE</span></a><div><button class="ibtn" id="me" aria-label="Профиль">${ms('person')}</button></div>`;
   $('#me').onclick = () => {
     const ex = $('.sheet'); if (ex){ ex.remove(); return; }
     const s = document.createElement('div'); s.className = 'sheet';
-    s.innerHTML = `<div class="h-sm trunc" style="margin-bottom:2px">${USER ? esc(userName()) : 'Aftertone'}</div>${USER ? `<div class="b-sm trunc mut" style="font-size:12px;margin-bottom:8px">${esc(USER.email)}</div>` : ''}${USER ? '<span id="syncSt">' + (syncLabel() || 'Дни сохраняются в облаке') + '</span>' : SUPABASE_KEY ? 'Войдите, чтобы дни сохранялись в облаке и открывались на любом устройстве.' : 'Дни и капсулы хранятся в этом браузере.'}${SUPABASE_KEY ? `<a class="btn sm w" href="#/login" style="margin-top:12px">${USER ? 'Аккаунт' : 'Войти или зарегистрироваться'}</a>` : ''}<button class="btn sec sm" id="aiTest">Проверить ИИ-картинку</button><div id="aiRes" class="b-sm" style="margin-top:8px"></div>${USER ? '' : '<button class="btn sec sm" id="reset">Вернуть демо-дни</button>'}`;
+    s.innerHTML = `<div class="h-sm trunc" style="margin-bottom:2px">${USER ? esc(userName()) : 'Aftertone'}</div>${USER ? `<div class="b-sm trunc mut" style="font-size:12px;margin-bottom:8px">${esc(USER.email)}</div>` : ''}${USER ? '<span id="syncSt">' + (syncLabel() || 'Дни сохраняются в облаке') + '</span>' : SUPABASE_KEY ? 'Войдите, чтобы дни сохранялись в облаке и открывались на любом устройстве.' : 'Дни и капсулы хранятся в этом браузере.'}${SUPABASE_KEY ? `<a class="btn sm w" href="#/login" style="margin-top:12px">${USER ? 'Аккаунт' : 'Войти или зарегистрироваться'}</a>` : ''}<a class="btn sec sm w" href="#/settings">${ms('tune')}Настройки</a>`;
     $('#top').appendChild(s);
-    $('#aiTest').onclick = async () => {
-      const res = $('#aiRes');
-      if (!IMAGE_ENDPOINT){ res.textContent = 'ИИ не подключён: в коде пустой IMAGE_ENDPOINT.'; return; }
-      res.textContent = 'Отправляю запрос…'; const t0 = performance.now();
-      try {
-        const r = await fetch(IMAGE_ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:'a cozy autumn park at sunset, warm light, painterly', text:'', style:''})});
-        const j = await r.json().catch(() => ({error: 'ответ не JSON, HTTP ' + r.status}));
-        const sec = ((performance.now() - t0)/1000).toFixed(1);
-        res.innerHTML = j.image ? `Работает ✓ модель: ${esc(j.model || '?')}, ${sec} с${j.warnings && j.warnings.length ? '<br>Предупреждения: ' + esc(j.warnings.join('; ').slice(0, 200)) : ''}<img src="${j.image}" style="width:100%;border-radius:8px;margin-top:8px">` : `Не работает ✗ ${esc(String(j.error || 'HTTP ' + r.status).slice(0, 240))}`;
-      } catch (e) { res.textContent = 'Нет связи с воркером: ' + (e.message || e) + '. Проверьте адрес и что воркер задеплоен.'; }
-    };
-    if ($('#reset')) $('#reset').onclick = async e => { const b = e.currentTarget; if (!b.dataset.sure){ b.dataset.sure = 1; b.textContent = 'Свои записи удалятся. Нажми ещё раз'; return; }
-      prepCache.clear(); thumbCache.clear(); photoThumbCache.clear(); await seedDemo(); seedCapsules(true); s.remove(); go('#/'); };
   };
 }
 function topBack(href, title, right = ''){
@@ -1677,8 +1773,8 @@ async function createDay(input){
     const id = 'd' + Date.now().toString(36);
     const day = { id, date: input.date, createdAt: Date.now(), text: input.text, photos, music, vibe, title, caption, description, v2: 1, v3: 1, v4: 1, v5: 1, rev: 0 };
     if (input.audio){ b.say('Сохраняю фрагмент песни'); try { await ADB.put(id, await makeClip(input.audio)); day.hasClip = true; } catch (e) { console.warn(e); } }
-    if (IMAGE_ENDPOINT) b.say('Нейросеть рисует день');
-    const aiImg = await generateAIImage(day); if (aiImg) day.art = [aiImg];
+    if (IMAGE_ENDPOINT && SET.ai) b.say('Нейросеть рисует день');
+    const aiImg = SET.ai ? await generateAIImage(day) : null; if (aiImg) day.art = [aiImg];
     if (input.audio){ sessionAudio.set(id, URL.createObjectURL(input.audio)); sessionFull.add(id); }
     DAYS.push(day); save();
     await new Promise(r => setTimeout(r, 450));
@@ -1911,7 +2007,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 let SB = null, USER = null, SYNC = 'off', syncTimer = null, syncing = false;
 const d2b = d => fetch(d).then(r => r.blob());
 const b2d = b => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(b); });
-function setSync(st){ SYNC = st; const el = $('#syncSt'); if (el) el.textContent = syncLabel(); }
+function setSync(st){ SYNC = st; const el = $('#syncSt'); if (el) el.textContent = syncLabel(); renderSide(); }
 const userName = () => (USER?.user_metadata?.name || '').trim() || (USER?.email || '').split('@')[0];
 const syncLabel = () => ({ off:'', idle:'Синхронизировано ✓', busy:'Сохраняю в облако…', error:'Не удалось сохранить в облако, попробую ещё раз', offline:'Нет связи с облаком — дни сохранены в браузере' })[SYNC] || '';
 async function sbInit(){
@@ -2051,6 +2147,7 @@ async function route(hash){
   stopAll(); window.scrollTo(0, 0); $('.sheet')?.remove();
   const [, r, id] = (hash.replace(/^#/, '') || '/').split('/');
   if (r === 'login') viewLogin();
+  else if (r === 'settings') viewSettings();
   else if (r === 'new') viewNew();
   else if (r === 'day') await viewDay(id);
   else if (r === 'diary' || r === 'feed') await viewDiary();
