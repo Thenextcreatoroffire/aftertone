@@ -38,6 +38,19 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .top{position:sticky;top:0;z-index:30;height:56px;display:flex;align-items:center;justify-content:space-between;background:color-mix(in oklab,var(--bg) 88%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);margin:0 -20px;padding:0 20px}
 .brand{font:700 15px var(--head);letter-spacing:.32em;color:var(--primary);display:inline-flex;align-items:center;gap:10px}
 .brand .logo{color:var(--aura);flex:none}
+.tact{display:flex;align-items:center;gap:2px}
+.tnav{display:flex;align-items:center;margin-right:6px;padding-right:6px;border-right:1px solid color-mix(in oklab,var(--outv) 60%,transparent)}
+.ibtn.off{opacity:.3;pointer-events:none}
+.ibtn:hover{background:color-mix(in oklab,var(--on) 8%,transparent)}
+.ava{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font:700 15px var(--head)}
+.ava.sm{width:30px;height:30px;font-size:13px;background:color-mix(in oklab,var(--aura) 30%,var(--cont));color:var(--on)}
+.srch{position:fixed;inset:0;z-index:60;background:color-mix(in oklab,var(--lowest) 60%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;justify-content:center;align-items:flex-start;padding:72px 16px 16px}
+.srch-box{width:100%;max-width:560px;background:var(--high);border:1px solid var(--outv);border-radius:18px;padding:14px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.srch-res{margin-top:8px;max-height:min(60vh,460px);overflow:auto}
+.srch-it{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:12px;color:var(--onv)}
+.srch-it:hover{background:var(--cont)}
+.srch-it .dot{width:12px;height:12px;border-radius:50%;flex:none}
+@media (max-width:420px){.top .ibtn{width:38px;height:40px}.tnav{margin-right:2px;padding-right:2px}.top .l span:not(.ms){display:none}}
 .dsk{display:none!important}
 .setrow{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0 0;margin-top:14px;border-top:1px solid color-mix(in oklab,var(--outv) 45%,transparent)}
 .card>h2+.setrow{border-top:0;margin-top:4px}
@@ -980,8 +993,8 @@ function genArt(day, th, seed){
 /* ---------- саундтрек дня (Web Audio) ----------
    Играет всегда, даже там, где плееры Spotify и YouTube недоступны: темп и лад берутся из песни дня,
    тембр и плотность — из настроения, фактура (дождь, плёнка) — из сцены и приёма. */
-let AC = null, BUS = null, SOUND = null;
-function audioCtx(){ if (!AC){ AC = new (window.AudioContext || window.webkitAudioContext)(); BUS = AC.createGain(); BUS.connect(AC.destination); } return AC; }
+let AC = null, BUS = null, SOUND = null, MUTEG = null;
+function audioCtx(){ if (!AC){ AC = new (window.AudioContext || window.webkitAudioContext)(); MUTEG = AC.createGain(); MUTEG.gain.value = SET.muted ? 0 : 1; MUTEG.connect(AC.destination); BUS = AC.createGain(); BUS.connect(MUTEG); } return AC; }
 function noiseBuf(ac){ const b = ac.createBuffer(1, ac.sampleRate*2, ac.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random()*2 - 1; return b; }
 const midiHz = m => 440 * Math.pow(2, (m - 69) / 12);
 function stopSoundtrack(){ if (SOUND){ SOUND.stop(); SOUND = null; } }
@@ -1033,6 +1046,7 @@ function pickVoice(){
 function speak(day, onState){
   if (!('speechSynthesis' in window)){ toast('Браузер не поддерживает синтез речи'); return; }
   if (speechSynthesis.speaking){ speechSynthesis.cancel(); duck(false); onState(false); return; }
+  if (SET.muted){ toast('Звук выключен — включите его значком динамика вверху'); return; }
   const u = new SpeechSynthesisUtterance(day.description || day.text), voice = pickVoice();
   if (voice) u.voice = voice; u.lang = 'ru-RU'; u.rate = Math.min(1.1, day.vibe.voice.rate * 0.92); u.pitch = day.vibe.voice.pitch;
   u.onend = u.onerror = () => { duck(false); onState(false); };
@@ -1601,8 +1615,12 @@ async function fillThumbs(root = document){
 
 /* ---------- шапка и меню ---------- */
 function setTab(r){ $$('.tabs a').forEach(a => a.classList.toggle('on', a.dataset.r === r)); }
-function topBrand(){
-  $('#top').innerHTML = `<a class="brand" href="#/">${LOGO(22)}<span>AFTERTONE</span></a><div><button class="ibtn" id="me" aria-label="Профиль">${ms('person')}</button></div>`;
+function topActions(extra = ''){
+  return `<div class="tact">${extra}<button class="ibtn" id="tSearch" aria-label="Поиск по дневнику" title="Поиск (Ctrl+K)">${ms('search')}</button><button class="ibtn" id="tMute" aria-label="${SET.muted ? 'Включить звук' : 'Выключить звук'}" title="${SET.muted ? 'Включить звук' : 'Выключить звук'}">${ms(SET.muted ? 'volume_off' : 'volume_up')}</button><button class="ibtn" id="me" aria-label="Профиль">${USER ? `<span class="ava sm">${esc(userName().slice(0, 1).toUpperCase())}</span>` : ms('person')}</button></div>`;
+}
+function bindTop(){
+  $('#tSearch').onclick = openSearch;
+  $('#tMute').onclick = () => setMuted(!SET.muted);
   $('#me').onclick = () => {
     const ex = $('.sheet'); if (ex){ ex.remove(); return; }
     const s = document.createElement('div'); s.className = 'sheet';
@@ -1610,9 +1628,39 @@ function topBrand(){
     $('#top').appendChild(s);
   };
 }
-function topBack(href, title, right = ''){
-  $('#top').innerHTML = `<a class="l" href="${href}">${ms('arrow_back_ios_new')}<span>${esc(title)}</span></a><div style="display:flex;gap:4px">${right}</div>`;
+function topBrand(){
+  $('#top').innerHTML = `<a class="brand" href="#/">${LOGO(22)}<span>AFTERTONE</span></a>${topActions()}`; bindTop();
 }
+function topBack(href, title, right = ''){
+  $('#top').innerHTML = `<a class="l" href="${href}">${ms('arrow_back_ios_new')}<span>${esc(title)}</span></a>${topActions(right)}`; bindTop();
+}
+function setMuted(on){
+  SET.muted = on; saveSet();
+  if (MUTEG && AC){ const t = AC.currentTime; MUTEG.gain.cancelScheduledValues(t); MUTEG.gain.setValueAtTime(MUTEG.gain.value, t); MUTEG.gain.linearRampToValueAtTime(on ? 0 : 1, t + 0.25); }
+  $$('audio').forEach(a => a.muted = on);
+  if (on && 'speechSynthesis' in window) speechSynthesis.cancel();
+  const b = $('#tMute'); if (b){ b.innerHTML = ms(on ? 'volume_off' : 'volume_up'); b.title = b.ariaLabel = on ? 'Включить звук' : 'Выключить звук'; }
+  toast(on ? 'Звук сайта выключен' : 'Звук сайта включён', 1800);
+}
+function norm(t){ return String(t || '').toLowerCase().replace(/ё/g, 'е'); }
+function openSearch(){
+  if ($('.srch')) return; $('.sheet')?.remove();
+  const o = document.createElement('div'); o.className = 'srch'; o.setAttribute('role', 'dialog'); o.setAttribute('aria-label', 'Поиск по дневнику');
+  o.innerHTML = `<div class="srch-box"><div class="search">${ms('search')}<input class="field" id="sq" placeholder="Поиск: снег, кино, друзья, ноябрь…" autocomplete="off" aria-label="Что найти"></div><div id="sres" class="srch-res"></div><p class="lb-sm out" style="margin-top:10px;letter-spacing:0">Enter — открыть первый, Esc — закрыть</p></div>`;
+  document.body.appendChild(o);
+  const close = () => { o.remove(); document.removeEventListener('keydown', key); };
+  const key = e => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', key);
+  o.onclick = e => { if (e.target === o || e.target.closest('a')) close(); };
+  const render = () => {
+    const q = norm($('#sq').value.trim()), words = q.split(/\s+/).filter(Boolean);
+    const list = sorted().slice().reverse().filter(d => { const hay = norm([d.title, d.text, d.description, d.caption, moodOf(d.vibe).label, fmtLong(d.date), d.music?.label].join(' ')); return words.every(w => hay.includes(w)); }).slice(0, 8);
+    $('#sres').innerHTML = list.length ? list.map(d => `<a href="#/day/${d.id}" class="srch-it"><span class="dot" style="background:${d.vibe.swatch?.accent || 'var(--aura)'}"></span><span style="min-width:0;flex:1"><span class="b-md trunc" style="display:block;color:var(--on)">${esc(d.title)}</span><span class="lb-sm out trunc" style="display:block;letter-spacing:0">${esc(fmtLong(d.date))} • ${esc(moodOf(d.vibe).short)}</span></span>${ms('chevron_right')}</a>`).join('') : `<p class="b-sm" style="padding:14px 4px">Ничего не нашлось. Попробуйте другое слово.</p>`;
+  };
+  $('#sq').oninput = render; $('#sq').onkeydown = e => { if (e.key === 'Enter'){ const a = $('#sres a'); if (a){ close(); go(a.getAttribute('href')); } } };
+  render(); setTimeout(() => $('#sq').focus(), 30);
+}
+document.addEventListener('keydown', e => { if ((e.key === 'k' && (e.ctrlKey || e.metaKey)) || (e.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName))){ e.preventDefault(); openSearch(); } });
 function busy(text){ const b = document.createElement('div'); b.className = 'busy'; b.innerHTML = `<div class="ring"></div><div class="h-md" id="busyT">${esc(text)}</div><div class="lb-sm up mut">собираю воспоминание дня</div>`; document.body.appendChild(b); return { say: t => { $('#busyT').textContent = t; }, done: () => b.remove() }; }
 
 /* ---------- эмоциональная волна ---------- */
@@ -1835,9 +1883,10 @@ function accordion(root, openTitles = []){
 /* ---------- воспоминание ---------- */
 async function viewDay(id){
   setTab(''); const day = DAYS.find(d => d.id === id); if (!day){ go('#/diary'); return; }
-  topBack('#/diary', 'Назад', `<button class="ibtn" id="tPng" aria-label="Скачать PNG">${ms('ios_share')}</button>`);
-  let P = await prepare(day); applyTheme(day);
   const list = sorted(), i = list.findIndex(d => d.id === id), prev = list[i-1], next = list[i+1];
+  const arrow = (d, icon, lbl) => d ? `<a class="ibtn" href="#/day/${d.id}" aria-label="${lbl}: ${esc(d.title)}" title="${lbl}: ${esc(d.title)}">${ms(icon)}</a>` : `<span class="ibtn off" aria-hidden="true">${ms(icon)}</span>`;
+  topBack('#/diary', 'Назад', `<span class="tnav">${arrow(prev, 'chevron_left', 'Предыдущий день')}${arrow(next, 'chevron_right', 'Следующий день')}</span>`);
+  let P = await prepare(day); applyTheme(day);
   const m = day.music, num = dayNum(day), sUrl = await songUrl(day), pl = playlistFor(day), smell = scentsFor(day), media = mediaFor(day);
   const sc = [['warmth','Тепло'],['energy','Энергия'],['tension','Напряжение'],['tempo','Темп']];
   app.innerHTML = `<div class="stack fade-in two dayv">
@@ -1904,16 +1953,16 @@ async function viewDay(id){
   loop(t => drawPoster(x, day, P, t));
   const player = $('#player'), audioUrl = sUrl, hint = t => { const h = $('#apHint'); if (h){ h.textContent = t; h.style.display = t ? '' : 'none'; } };
   const mBtn = on => { const b = $('#bMusic'); if (b){ b.innerHTML = ms(on ? 'pause' : 'play_arrow', 1); b.setAttribute('aria-label', on ? 'Пауза' : 'Включить музыку'); } };
-  const ensureAudio = () => { let a = $('audio', player); if (!a){ player.innerHTML = `<audio src="${audioUrl}" controls loop style="width:100%;margin-top:12px"></audio>`; a = $('audio', player); a.onpause = () => mBtn(false); a.onplay = () => { mBtn(true); hint(''); }; } return a; };
+  const ensureAudio = () => { let a = $('audio', player); if (!a){ player.innerHTML = `<audio src="${audioUrl}" controls loop style="width:100%;margin-top:12px"></audio>`; a = $('audio', player); a.muted = !!SET.muted; a.onpause = () => mBtn(false); a.onplay = () => { mBtn(true); hint(''); }; } return a; };
   const playSynth = async () => { startSoundtrack(day); try { await AC.resume(); } catch {} if (AC.state !== 'running'){ stopSoundtrack(); return false; } mBtn(true); return true; };
-  if (m.embed && !audioUrl) mountEmbed(player, m, SET.autoplay);
+  if (m.embed && !audioUrl) mountEmbed(player, m, SET.autoplay && !SET.muted);
   if ($('#bMusic')) $('#bMusic').onclick = async () => {
     hint('');
     if (audioUrl){ stopSoundtrack(); const a = ensureAudio(); a.paused ? a.play().catch(() => hint('Нажмите ▶ в плеере ниже')) : a.pause(); }
     else if (SOUND && SOUND.day === day.id){ stopSoundtrack(); mBtn(false); }
     else await playSynth();
   };
-  if (SET.autoplay){
+  if (SET.autoplay && !SET.muted){
     if (audioUrl){ ensureAudio().play().catch(() => hint('Браузер не дал включить музыку сам — нажмите ▶')); }
     else if (!m.embed){ playSynth().then(ok => { if (!ok) hint('Браузер не дал включить музыку сам — нажмите ▶'); }); }
   }
@@ -1921,7 +1970,7 @@ async function viewDay(id){
   $('#bVoice').onclick = () => speak(day, on => { $('#bVoice').innerHTML = `${ms(on ? 'stop_circle' : 'record_voice_over')}<span>${on ? 'Остановить' : 'Озвучка'}</span>`; });
   $('#phs').innerHTML = P.raw.map((im, k) => { const cc = makeCanvas(300, 336); drawCover(cc.getContext('2d'), im, 0, 0, 300, 336, 1, 0, 0); return `<div class="tile"><img src="${cc.toDataURL('image/jpeg', 0.8)}" alt="Фото ${k + 1}"></div>`; }).join('');
   const png = () => c.toBlob(b => { if (b){ saveBlob(b, day.title + '.png'); toast('Картинка сохранена — проверьте загрузки'); } else toast('Не удалось сохранить картинку'); }, 'image/png');
-  $('#bPng').onclick = png; $('#tPng').onclick = png;
+  $('#bPng').onclick = png;
   $('#bVid').onclick = e => makeVideo(day, P, c, e.currentTarget);
   prebuildVideo(day, P);
   $('#bRe').onclick = async () => {
