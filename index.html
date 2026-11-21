@@ -366,7 +366,7 @@ function analyzeText(raw){
 const RX = (frag) => new RegExp('(?:^|[^а-я])(?:' + frag + ')', 'i');
 const has = (t, frag) => RX(frag).test(t);
 function sceneKind(t){
-  if (has(t, 'день рожд|вечерин|концерт|праздн|танц|клуб|свадьб|выпускн')) return 'party';
+  if (has(t, 'день рожд|вечерин|концерт|праздн|клуб|дискотек|свадьб|выпускн|тусовк|туса')) return 'party';
   if (has(t, 'офис|дедлайн|сдач|билд|ноутбук|компьютер|работ')) return 'office';
   if (has(t, 'мор(?:е|я|ю|ем|ск)|пляж|озер|океан|рек(?:а|и|е|у|ой)(?![а-я])')) return 'sea';
   if (has(t, 'гор(?:ы|ах|ам)(?![а-я])|поход')) return 'mountains';
@@ -414,7 +414,7 @@ const ACTS = [
 ];
 function moodShortOf(A, s){ return s.tension > 0.6 ? 'Напряжение' : (s.energy > 0.65 && s.warmth > 0.5) ? 'Радость' : A.nostalgia ? 'Ностальгия' : (s.sadness || 0) > 0.25 ? 'Грусть' : (s.energy < 0.42 && s.warmth > 0.55) ? 'Тепло' : s.energy < 0.42 ? 'Тишина' : 'Вдохновение'; }
 const WEATHER_PH = { rain:'под шум дождя', snow:'под падающим снегом', fog:'в тумане' };
-const MOOD_TAIL = { 'Тепло':'и тепло', 'Напряжение':'на пределе', 'Радость':'и много смеха', 'Грусть':'и немного грусти', 'Ностальгия':'и воспоминания', 'Тишина':'и тишина', 'Вдохновение':'и вдохновение' };
+const MOOD_TAIL = { 'Тепло':'и тепло', 'Напряжение':'на пределе', 'Радость':'и много смеха', 'Грусть':'и немного грусти', 'Ностальгия':'и воспоминания', 'Тишина':'и тишина', 'Вдохновение':'и лёгкость' };
 function topicOf(A){
   const t = A.raw, find = (list) => list.find(e => has(t, e[0]));
   return { act: ACTS.find(e => has(t, e[0])), place: find(PLACES2), things: THINGS2.filter(e => has(t, e[0])), comp: find(COMP2), event: EVENTS.find(e => t.includes(e[0])), before: BEFORE.find(e => has(t, e[0])), weather: weatherOf(t), firstSnow: t.includes('первый снег') };
@@ -441,7 +441,7 @@ function makeTitle(A, scales){
     if (o.weather && !thing && !o.comp && !o.place) title = `${tn[0].charAt(0).toUpperCase() + tn[0].slice(1)} ${WEATHER_PH[o.weather]}`; else title = `${set[GI[tn[1]]]} ${tn[0].toLowerCase()}` + (o.place ? ' дома' : '') + (o.place && o.comp ? ' ' + o.comp[1] : thing ? ' и ' + thing[1] : o.comp ? ' ' + o.comp[1] : '');
   }
   let w = title.split(' ');
-  if (w.length < 3){ const ms0 = moodShortOf(A, s); let tail = MOOD_TAIL[ms0]; if (/^(Тих|Шумн|Тёпл|Нервн)/.test(w[0])) tail = { 'Тишина':'без спешки', 'Тепло':'и уют', 'Напряжение':'без передышки', 'Радость':'и много смеха' }[ms0] || tail; w = w.concat(tail.split(' ')); }
+  if (w.length < 3){ const ms0 = moodShortOf(A, s); let tail = ROMANCE.test(A.raw) ? 'вдвоём' : MOOD_TAIL[ms0]; if (/^(Тих|Шумн|Тёпл|Нервн)/.test(w[0])) tail = { 'Тишина':'без спешки', 'Тепло':'и уют', 'Напряжение':'без передышки', 'Радость':'и много смеха' }[ms0] || tail; w = w.concat(tail.split(' ')); }
   return cap(w.slice(0, 7).join(' '));
 }
 const OPEN = {
@@ -602,6 +602,7 @@ function semanticHue(v){
   if (T.weather === 'fog') return 250;
   if (T.scene === 'office' || s.tension > 0.6) return 262;
   if (T.scene === 'sea') return 205;
+  if (T.romance && !T.season) return 355;
   if (T.season === 'autumn') return 58;
   if (T.season === 'spring') return 140;
   if (T.season === 'summer') return 88;
@@ -616,7 +617,7 @@ function themeFromVibe(v){
   const pull = clamp(Math.abs(s.warmth - 0.5) * 1.4, 0, 0.7);
   const sem = semanticHue(v);
   let hue;
-  if (sem != null){ hue = P.chroma > 0.05 ? mixHue(sem, P.hue, 0.3) : sem; hue = mixHue(hue, target, clamp(Math.abs(s.warmth - 0.5) * 0.5, 0, 0.18)); }
+  if (sem != null){ const d = Math.abs(((P.hue - sem + 540) % 360) - 180); const k = P.chroma > 0.05 ? (d < 45 ? 0.2 : d < 90 ? 0.08 : 0) : 0; hue = mixHue(sem, P.hue, k); hue = mixHue(hue, target, clamp(Math.abs(s.warmth - 0.5) * 0.2, 0, 0.08)); }
   else hue = P.chroma > 0.05 ? mixHue(P.hue, target, pull) : target;
   const cA = clamp(0.05 + s.energy*0.13 - (v.music.minor ? 0.025 : 0) - s.sadness*0.03, 0.03, 0.2);
   const th = dark ? {
@@ -638,8 +639,8 @@ function themeFromVibe(v){
 }
 function uiTheme(v){
   const th = themeFromVibe(v), h = th.hue, s = v.scales;
-  const c = 0.03 + 0.035*s.energy + 0.015*Math.abs(s.warmth - 0.5)*2 - 0.012*s.sadness;
-  const L0 = 0.15 + 0.03*s.energy - 0.02*s.tension;
+  const c = clamp(0.014 + 0.02*s.energy + 0.006*Math.abs(s.warmth - 0.5)*2 - 0.006*s.sadness, 0.01, 0.04);
+  const L0 = 0.17 + 0.025*s.energy - 0.015*s.tension;
   return { bg: ok(L0, c, h), lowest: ok(L0 - 0.03, c*0.9, h), low: ok(L0 + 0.045, c*1.05, h), cont: ok(L0 + 0.075, c*1.05, h), high: ok(L0 + 0.125, c, h), highest: ok(L0 + 0.17, c*0.95, h),
     on: ok(0.93, 0.025, h), onv: ok(0.83, 0.035, h), outline: ok(0.68, 0.04, h), outv: ok(0.4, 0.035, h), primary: ok(0.95, 0.04 + 0.03*s.energy, h), 'on-primary': ok(0.22, 0.03, h),
     aura: ok(0.74, clamp(0.11 + 0.12*s.energy - 0.03*s.sadness, 0.08, 0.22), h) };
@@ -662,7 +663,7 @@ async function buildVibe(text, photoSources, music){
   const ai = await analyzeWithAI({text, photoColors:P.colors, music:{label:music.label, bpm:music.bpm, minor:music.minor, genre:music.genre}});
   if (ai){ if (ai.scales) Object.assign(T.scales, ai.scales); if (typeof ai.nostalgia === 'boolean') T.nostalgia = ai.nostalgia; if (ai.hits) Object.assign(T.hits, ai.hits); }
   const v = { scales: combine(T, P, music), photo: P, music: {bpm:music.bpm, energy:music.energy, minor:music.minor, genre:music.genre, source:music.source},
-    textInfo: { hits:{warm:T.hits.warm, cold:T.hits.cold, tension:T.hits.tension}, tod:T.tod, season:T.season, nostalgia:T.nostalgia, scene: sceneKind(T.raw), weather: weatherOf(T.raw) } };
+    textInfo: { hits:{warm:T.hits.warm, cold:T.hits.cold, tension:T.hits.tension}, tod:T.tod, season:T.season, nostalgia:T.nostalgia, scene: sceneKind(T.raw), weather: weatherOf(T.raw), romance: ROMANCE.test(T.raw) } };
   finalize(v);
   let title = makeTitle(T, v.scales), { description, caption } = makeStory(T, v, hashStr(text));
   if (ai){ if (ai.title && ai.title.split(' ').length >= 3 && ai.title.split(' ').length <= 7) title = ai.title; if (ai.description) description = ai.description; if (ai.caption) caption = ai.caption.slice(0, 60); }
@@ -754,7 +755,7 @@ async function seedDemo(){
     const photos = [0,1,2].map(k => scene(d.scene, k + 1));
     const music = musicFromLink(d.music.url, d.music.label, d.music.tempo, d.music.mode);
     const { vibe, title, caption, description } = await buildVibe(d.text, photos, music);
-    DAYS.push({ id:d.id, demo:true, scene:d.scene, date:d.date, createdAt:i, text:d.text, photos:[], music, vibe, title, caption, description, v2:1, v3:1, rev:0 });
+    DAYS.push({ id:d.id, demo:true, scene:d.scene, date:d.date, createdAt:i, text:d.text, photos:[], music, vibe, title, caption, description, v2:1, v3:1, v4:1, rev:0 });
   }
   save();
 }
@@ -1257,7 +1258,8 @@ function fxKinds(day){
   else if (T.tod === 'night') main = 'stars';
   else if (T.tod === 'evening') main = 'fireflies';
   else main = 'dust';
-  return love && main !== 'hearts' ? [main, 'hearts'] : [main];
+  const second = love && main !== 'hearts' ? 'hearts' : (main === 'confetti' && (T.weather === 'snow' || T.season === 'winter')) ? 'snow' : (main === 'confetti' && T.weather === 'rain') ? 'rain' : null;
+  return second ? [main, second] : [main];
 }
 function fxInit(){
   if (FX.cv) return; const c = document.createElement('canvas'); c.id = 'fx'; c.setAttribute('aria-hidden', 'true'); document.body.appendChild(c);
@@ -1623,7 +1625,7 @@ async function createDay(input){
     const { vibe, title, caption, description } = await buildVibe(input.text, imgs, music);
     b.say('Рисую картину дня');
     const id = 'd' + Date.now().toString(36);
-    const day = { id, date: input.date, createdAt: Date.now(), text: input.text, photos, music, vibe, title, caption, description, v2: 1, v3: 1, rev: 0 };
+    const day = { id, date: input.date, createdAt: Date.now(), text: input.text, photos, music, vibe, title, caption, description, v2: 1, v3: 1, v4: 1, rev: 0 };
     if (input.audio){ b.say('Сохраняю фрагмент песни'); try { await ADB.put(id, await makeClip(input.audio)); day.hasClip = true; } catch (e) { console.warn(e); } }
     if (IMAGE_ENDPOINT) b.say('Нейросеть рисует день');
     const aiImg = await generateAIImage(day); if (aiImg) day.art = [aiImg];
@@ -1871,6 +1873,7 @@ async function route(hash){
   const stored = load();
   if (stored && stored.length) DAYS = stored; else await seedDemo();
   let migrated = false;
+  for (const d of DAYS) if (!d.v4){ const A = analyzeText(d.text); Object.assign(d.vibe.textInfo, { scene: sceneKind(A.raw), weather: weatherOf(A.raw), romance: ROMANCE.test(A.raw) }); finalize(d.vibe); d.title = makeTitle(A, d.vibe.scales); const st = makeStory(A, d.vibe, hashStr(d.text)); d.description = st.description; d.caption = st.caption; d.v2 = d.v3 = d.v4 = 1; d.rev++; migrated = true; }
   for (const d of DAYS) if (!d.v3){ const A = analyzeText(d.text); d.title = makeTitle(A, d.vibe.scales); const st = makeStory(A, d.vibe, hashStr(d.text)); d.description = st.description; d.caption = st.caption; d.v2 = d.v3 = 1; d.rev++; migrated = true; }
   for (const d of DAYS) if (!d.v2){ const A = analyzeText(d.text); Object.assign(d.vibe.textInfo, { scene: sceneKind(A.raw), weather: weatherOf(A.raw), tod: A.tod, season: A.season }); d.title = makeTitle(A, d.vibe.scales); const st = makeStory(A, d.vibe, hashStr(d.text)); d.description = st.description; d.caption = st.caption; d.v2 = 1; d.rev++; migrated = true; }
   for (const d of DAYS){ const th = themeFromVibe(d.vibe); const sw = { bg: th.bg, accent: th.accent, ink: th.ink, onAccent: contrast(th.accent, '#111111') > 6 ? '#111111' : '#f4efe6' }; if (JSON.stringify(sw) !== JSON.stringify(d.vibe.swatch)){ d.vibe.swatch = sw; migrated = true; } }
