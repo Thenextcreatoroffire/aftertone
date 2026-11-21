@@ -1131,6 +1131,35 @@ function mediaFor(day){
 /* ---------- живой звук места ---------- */
 let AMB = null;
 function stopAmbient(){ if (AMB){ AMB.stop(); AMB = null; } }
+function ambName(day){
+  const T = day.vibe.textInfo || {};
+  if (T.weather === 'rain') return ['Шум дождя', 'rainy'];
+  if (T.scene === 'sea') return ['Шум моря', 'waves'];
+  if (T.scene === 'park' || T.scene === 'field') return ['Звуки природы', 'park'];
+  if (T.scene === 'city') return ['Шум города', 'location_city'];
+  if (T.scene === 'office') return ['Звуки офиса', 'keyboard'];
+  if (T.scene === 'party') return ['Шум праздника', 'celebration'];
+  if (T.weather === 'snow' || T.season === 'winter') return ['Зимняя тишина', 'ac_unit'];
+  return ['Звуки места', 'graphic_eq'];
+}
+let SPOTIFY_API = null;
+function spotifyApi(){
+  if (!SPOTIFY_API) SPOTIFY_API = new Promise((res, rej) => { window.onSpotifyIframeApiReady = api => res(api); const sc = document.createElement('script'); sc.src = 'https://open.spotify.com/embed/iframe-api/v1'; sc.async = true; sc.onerror = rej; document.head.appendChild(sc); setTimeout(() => rej(new Error('timeout')), 8000); });
+  return SPOTIFY_API;
+}
+function mountEmbed(box, m, autoplay){
+  const plain = () => { box.innerHTML = `<iframe src="${m.embed}${autoplay && m.embed.includes('youtube') ? '?autoplay=1' : ''}" style="width:100%;border:0;border-radius:12px;margin-top:12px;display:block" height="${m.embed.includes('spotify') ? 152 : 220}" allow="autoplay; encrypted-media; clipboard-write" loading="lazy" title="Песня дня"></iframe>`; };
+  const sp = m.embed.match(/open\.spotify\.com\/embed\/(track|album|playlist|episode|show)\/([A-Za-z0-9]+)/);
+  if (!sp) return plain();
+  box.innerHTML = '<div style="margin-top:12px;border-radius:12px;overflow:hidden"><div id="spEl"></div></div>';
+  spotifyApi().then(api => {
+    const el = $('#spEl', box); if (!el) return;
+    api.createController(el, { uri: `spotify:${sp[1]}:${sp[2]}`, width: '100%', height: 152 }, ctl => {
+      const fr = box.querySelector('iframe'); if (fr){ fr.style.borderRadius = '12px'; fr.setAttribute('allow', 'autoplay; encrypted-media; clipboard-write'); }
+      if (autoplay) ctl.addListener('ready', () => { try { ctl.play(); } catch {} });
+    });
+  }).catch(plain);
+}
 function startAmbient(day){
   stopAmbient(); const ac = audioCtx(); ac.resume();
   const T = day.vibe.textInfo, sc = T.scene, w = T.weather, nb = noiseBuf(ac), out = ac.createGain(), nodes = [], timers = [];
@@ -1278,7 +1307,7 @@ addEventListener('keydown', e => { if (e.key === 'Escape') exitDay(); });
 /* ---------- настройки, логотип, боковая панель ---------- */
 const plural = (n, a, b, c) => { const m = Math.abs(n) % 100, k = m % 10; return m > 10 && m < 20 ? c : k === 1 ? a : k >= 2 && k <= 4 ? b : c; };
 const SKEY = 'aftertone.settings.v1';
-const SET = Object.assign({ theme: 'day', fx: null, ai: true }, (() => { try { return JSON.parse(localStorage.getItem(SKEY) || '{}'); } catch { return {}; } })());
+const SET = Object.assign({ theme: 'day', fx: null, ai: true, autoplay: true }, (() => { try { return JSON.parse(localStorage.getItem(SKEY) || '{}'); } catch { return {}; } })());
 function saveSet(){ try { localStorage.setItem(SKEY, JSON.stringify(SET)); } catch {} }
 const LOGO = (s = 28) => `<svg class="logo" width="${s}" height="${s}" viewBox="0 0 32 32" aria-hidden="true"><circle cx="10" cy="16" r="5.5" fill="currentColor"/><path d="M16.2 9.2a9.5 9.5 0 0 1 0 13.6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" opacity=".7"/><path d="M20.6 4.8a15.6 15.6 0 0 1 0 22.4" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" opacity=".4"/></svg>`;
 function setFavicon(bg, fg){
@@ -1326,6 +1355,7 @@ function viewSettings(){
         <div class="setrow"><div><div class="b-md" style="color:var(--on)">Частицы</div><div class="b-sm">Снег, листья, сердечки и другие по теме дня</div></div>${sw('sFx', fxOn)}</div>
       </section>
       <section class="card"><h2 class="h-sm">Голос и звук</h2>
+        <div class="setrow"><div><div class="b-md" style="color:var(--on)">Музыка при открытии дня</div><div class="b-sm">Песня дня включается сама, если браузер разрешит</div></div>${sw('sAuto', SET.autoplay)}</div>
         <div class="setrow" style="flex-direction:column;align-items:stretch"><div><div class="b-md" style="color:var(--on)">Голос озвучки</div><div class="b-sm">Русские голоса, установленные в браузере</div></div>
           <div class="row" style="gap:8px"><select class="field" id="sVoice" aria-label="Голос озвучки" style="flex:1"></select><button class="btn sec sm" id="sVoiceT">${ms('play_arrow')}Послушать</button></div></div>
       </section>
@@ -1348,6 +1378,7 @@ function viewSettings(){
   const toggle = (id, fn) => { $('#' + id).onclick = e => { const on = e.currentTarget.getAttribute('aria-checked') !== 'true'; e.currentTarget.setAttribute('aria-checked', on); fn(on); }; };
   toggle('sFx', on => { SET.fx = on; saveSet(); FX.on = on; if (on){ FX.id = null; applyTheme(latest()); } else { FX.list = []; FX.x?.clearRect(0, 0, FX.cv.width, FX.cv.height); } });
   toggle('sAi', on => { SET.ai = on; saveSet(); });
+  toggle('sAuto', on => { SET.autoplay = on; saveSet(); });
   const fill = () => { const vs = ruVoices(), cur = pickVoice(), sel = $('#sVoice'); if (!sel) return; sel.innerHTML = vs.length ? vs.map(v => `<option ${cur && v.name === cur.name ? 'selected' : ''}>${esc(v.name)}</option>`).join('') : '<option>голос браузера</option>'; };
   fill(); if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = fill;
   $('#sVoice').onchange = e => { try { localStorage.setItem('aftertone.voice', e.target.value); } catch {} speechSynthesis.cancel(); };
@@ -1809,12 +1840,13 @@ async function viewDay(id){
     <section class="F"><p class="lb-sm up mut">${fmtLong(day.date).toUpperCase()} • ПАПКА № ${num}</p><h1 class="h-dl" style="margin-top:8px">${esc(day.title)}</h1><p class="hand" style="margin-top:8px">${esc(day.caption)}</p></section>
     <div class="col sticky">
     <div class="poster"><canvas id="pc" width="1080" height="1350" aria-label="Воспоминание дня: ${esc(day.title)}"></canvas></div>
-    <div class="player"><div class="row"><div class="row" style="gap:12px;justify-content:flex-start;min-width:0"><button class="ibtn solid" id="bMusic" aria-label="Включить звук дня"><span class="ms f">play_arrow</span></button>
+    <div class="player"><div class="lb-sm up out">Музыка дня</div>
+      <div class="row" style="margin-top:10px"><div class="row" style="gap:12px;justify-content:flex-start;min-width:0">${sUrl || !m.embed ? `<button class="ibtn solid" id="bMusic" aria-label="Включить музыку"><span class="ms f">play_arrow</span></button>` : `<span class="ibtn solid" aria-hidden="true">${ms('music_note', 1)}</span>`}
         <div style="min-width:0"><div class="h-sm trunc">${sUrl || m.embed ? esc(m.label) : 'Саундтрек дня'}</div><div class="lb-md mut trunc">${sUrl ? (day.hasClip && !sessionFull.has(day.id) ? 'ваш трек • фрагмент 60 с' : 'ваш трек') : m.embed ? esc(m.service) : (m.label ? 'по мотивам: ' + esc(m.label) : 'сгенерирован под настроение')} • ${day.vibe.music.bpm} bpm${day.vibe.music.minor === true ? ' • минор' : day.vibe.music.minor === false ? ' • мажор' : ''}</div></div></div>
-        <div style="display:flex"><button class="ibtn" id="bSynth" aria-label="Сгенерированный звук дня" title="Звук дня">${ms('graphic_eq')}</button><button class="ibtn" id="bVoice" aria-label="Озвучка описания">${ms('record_voice_over')}</button></div></div>
-      <div class="prog"><i id="prog"></i></div><div class="row lb-sm out" style="letter-spacing:0;margin-top:6px"><span id="pcur">кадр 1</span><span>смена каждые ${day.vibe.frameDur.toFixed(1)} с</span></div>
-      <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap;justify-content:flex-start">${m.url ? `<a class="btn sec sm" href="${esc(m.url)}" target="_blank" rel="noopener">Оригинал в ${esc(m.service)} ${ms('open_in_new')}</a>` : ''}<label class="row" style="gap:6px;justify-content:flex-start"><span class="lb-md out">Голос</span><select id="voiceSel" class="field" style="height:40px;width:auto;max-width:220px;font-size:13px"></select></label></div>
-      <div id="player" style="margin-top:12px"></div></div>
+        ${m.url ? `<a class="ibtn" href="${esc(m.url)}" target="_blank" rel="noopener" aria-label="Открыть в ${esc(m.service)}" title="Открыть в ${esc(m.service)}">${ms('open_in_new')}</a>` : ''}</div>
+      <div id="player"></div><p class="b-sm out" id="apHint" style="font-size:12px;margin-top:8px;display:none"></p></div>
+    <div class="player"><div class="lb-sm up out">Голос и атмосфера</div>
+      <div class="ctas" style="margin-top:10px"><button class="btn sec sm" id="bVoice">${ms('record_voice_over')}<span>Озвучка</span></button><button class="btn sec sm" id="bAmb">${ms(ambName(day)[1])}<span>${ambName(day)[0]}</span></button></div></div>
     <div class="ctas"><button class="btn" id="bPng">${ms('download')}PNG</button><button class="btn sec" id="bVid">${ms('movie')}<span>Видео 15 с</span></button></div>
     <div class="ctas"><button class="btn sec sm" id="bRe">${ms('auto_fix_high')}Пересоздать дизайн</button><button class="btn sec sm" id="bDel">${ms('delete')}<span>Удалить</span></button></div>
     </div><div class="col">
@@ -1864,18 +1896,24 @@ async function viewDay(id){
   };
   side();
   const c = $('#pc'), x = c.getContext('2d');
-  loop(t => { drawPoster(x, day, P, t); const n = P.photos.length, dur = day.vibe.frameDur; $('#prog').style.width = ((t % (dur*n)) / (dur*n) * 100).toFixed(1) + '%'; $('#pcur').textContent = `кадр ${Math.floor(t / dur) % n + 1} из ${n}`; });
-  const player = $('#player'), audioUrl = sUrl;
-  $('#bSynth').onclick = () => { $('audio', player)?.pause(); if (SOUND && SOUND.day === day.id){ stopSoundtrack(); stopAmbient(); $('#bSynth').innerHTML = ms('graphic_eq'); } else { startSoundtrack(day); startAmbient(day); $('#bSynth').innerHTML = ms('stop_circle'); } };
-  $('#bMusic').onclick = () => {
-    if (audioUrl){ stopSoundtrack(); let a = $('audio', player); if (!a){ player.innerHTML = `<audio src="${audioUrl}" controls loop style="width:100%"></audio>`; a = $('audio', player); a.onpause = () => $('#bMusic').innerHTML = ms('play_arrow', 1); a.onplay = () => $('#bMusic').innerHTML = ms('pause', 1); } a.paused ? a.play().catch(() => toast('Нажмите ▶ в плеере ниже')) : a.pause(); }
-    else if (m.embed){ if (!$('iframe', player)) player.innerHTML = `<iframe src="${m.embed}" style="width:100%;border:0;border-radius:12px" height="${m.embed.includes('spotify') ? 152 : 220}" allow="autoplay; encrypted-media; clipboard-write" loading="lazy" title="Песня дня"></iframe><p class="b-sm out" style="font-size:12px;margin-top:6px">Если плеер не загрузился, откройте оригинал по кнопке выше.</p>`; }
-    else { if (SOUND && SOUND.day === day.id){ stopSoundtrack(); $('#bMusic').innerHTML = ms('play_arrow', 1); } else { startSoundtrack(day); $('#bMusic').innerHTML = ms('pause', 1); } }
+  loop(t => drawPoster(x, day, P, t));
+  const player = $('#player'), audioUrl = sUrl, hint = t => { const h = $('#apHint'); if (h){ h.textContent = t; h.style.display = t ? '' : 'none'; } };
+  const mBtn = on => { const b = $('#bMusic'); if (b){ b.innerHTML = ms(on ? 'pause' : 'play_arrow', 1); b.setAttribute('aria-label', on ? 'Пауза' : 'Включить музыку'); } };
+  const ensureAudio = () => { let a = $('audio', player); if (!a){ player.innerHTML = `<audio src="${audioUrl}" controls loop style="width:100%;margin-top:12px"></audio>`; a = $('audio', player); a.onpause = () => mBtn(false); a.onplay = () => { mBtn(true); hint(''); }; } return a; };
+  const playSynth = async () => { startSoundtrack(day); try { await AC.resume(); } catch {} if (AC.state !== 'running'){ stopSoundtrack(); return false; } mBtn(true); return true; };
+  if (m.embed && !audioUrl) mountEmbed(player, m, SET.autoplay);
+  if ($('#bMusic')) $('#bMusic').onclick = async () => {
+    hint('');
+    if (audioUrl){ stopSoundtrack(); const a = ensureAudio(); a.paused ? a.play().catch(() => hint('Нажмите ▶ в плеере ниже')) : a.pause(); }
+    else if (SOUND && SOUND.day === day.id){ stopSoundtrack(); mBtn(false); }
+    else await playSynth();
   };
-  $('#bVoice').onclick = () => speak(day, on => { $('#bVoice').innerHTML = ms(on ? 'stop_circle' : 'record_voice_over'); });
-  const fillVoices = () => { const vs = ruVoices(), cur = pickVoice(); const sel = $('#voiceSel'); if (!sel) return; sel.innerHTML = vs.length ? vs.map(v => `<option ${cur && v.name === cur.name ? 'selected' : ''}>${esc(v.name)}</option>`).join('') : '<option>голос браузера</option>'; };
-  fillVoices(); if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = fillVoices;
-  $('#voiceSel').onchange = e => { try { localStorage.setItem('aftertone.voice', e.target.value); } catch {} speechSynthesis.cancel(); };
+  if (SET.autoplay){
+    if (audioUrl){ ensureAudio().play().catch(() => hint('Браузер не дал включить музыку сам — нажмите ▶')); }
+    else if (!m.embed){ playSynth().then(ok => { if (!ok) hint('Браузер не дал включить музыку сам — нажмите ▶'); }); }
+  }
+  $('#bAmb').onclick = () => { const on = !AMB; if (on){ startAmbient(day); audioCtx().resume(); } else stopAmbient(); $('#bAmb').classList.toggle('on', on); $('span:first-child', $('#bAmb')).textContent = on ? 'stop_circle' : ambName(day)[1]; };
+  $('#bVoice').onclick = () => speak(day, on => { $('#bVoice').innerHTML = `${ms(on ? 'stop_circle' : 'record_voice_over')}<span>${on ? 'Остановить' : 'Озвучка'}</span>`; });
   $('#phs').innerHTML = P.raw.map((im, k) => { const cc = makeCanvas(300, 336); drawCover(cc.getContext('2d'), im, 0, 0, 300, 336, 1, 0, 0); return `<div class="tile"><img src="${cc.toDataURL('image/jpeg', 0.8)}" alt="Фото ${k + 1}"></div>`; }).join('');
   const png = () => { const a = document.createElement('a'); a.download = day.title + '.png'; a.href = c.toDataURL('image/png'); a.click(); };
   $('#bPng').onclick = png; $('#tPng').onclick = png;
