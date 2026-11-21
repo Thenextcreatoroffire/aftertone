@@ -643,7 +643,6 @@ function finalize(v){
   else if (T.hits.cold.length) rules.push(`${q(T.hits.cold)} → оттенки сдвигаются в холодную сторону`);
   if (T.hits.tension.length) rules.push(`${q(T.hits.tension)} → жёсткая сетка и высокий контраст`);
   rules.push(TECH[tech].why);
-  rules.push(`озвучка: голос ${voice.label} (скорость ${voice.rate}, высота ${voice.pitch})`);
   Object.assign(v, { technique: tech, mode, frameDur, cut, air, voice, rules });
   const th = themeFromVibe(v);
   v.swatch = { bg: th.bg, accent: th.accent, ink: th.ink, onAccent: contrast(th.accent, '#111111') > 6 ? '#111111' : '#f4efe6' };
@@ -1423,7 +1422,7 @@ function enterDay(day, P, mode = 'cinema'){
   // звук: песня (фрагмент) или саундтрек + звук места, через 5 с — голос
   let song = null;
   (async () => { const url = await songUrl(day); if (!st.alive) return; if (url){ song = new Audio(url); song.loop = true; song.volume = 0.9; song.play().catch(() => {}); } else startSoundtrack(day); startAmbient(day); })();
-  const vt = setTimeout(() => speak(day, on => { if (song) song.volume = on ? 0.35 : 0.9; }), 5000);
+  const vt = null;
   const view = (dx, dy, dw, dh, eye) => {
     const pano = st.pano, PW = pano.width, PH = pano.height, s = dh / (PH*0.78), vw = dw / s, vh = dh / s;
     let sx = ((((st.yaw / 360) * PW + eye - vw/2) % PW) + PW) % PW; const sy = clamp((PH - vh)/2 - (st.pitch / 35) * (PH - vh)/2, 0, PH - vh);
@@ -1512,10 +1511,8 @@ function viewSettings(){
           <div class="row" style="gap:8px;justify-content:flex-start;flex-wrap:wrap"><button class="chip ${SET.theme === 'day' ? 'on' : ''}" data-th="day">${ms('palette')}По настроению дня</button><button class="chip ${SET.theme === 'mono' ? 'on' : ''}" data-th="mono">${ms('contrast')}Монохром</button></div></div>
         <div class="setrow"><div><div class="b-md" style="color:var(--on)">Частицы</div><div class="b-sm">Снег, листья, сердечки и другие по теме дня</div></div>${sw('sFx', fxOn)}</div>
       </section>
-      <section class="card"><h2 class="h-sm">Голос и звук</h2>
+      <section class="card"><h2 class="h-sm">Звук</h2>
         <div class="setrow"><div><div class="b-md" style="color:var(--on)">Музыка при открытии дня</div><div class="b-sm">Песня дня включается сама, если браузер разрешит</div></div>${sw('sAuto', SET.autoplay)}</div>
-        <div class="setrow" style="flex-direction:column;align-items:stretch"><div><div class="b-md" style="color:var(--on)">Голос озвучки</div><div class="b-sm">Живой голос Google или лучшие голоса вашего браузера</div></div>
-          <div class="row" style="gap:8px"><select class="field" id="sVoice" aria-label="Голос озвучки" style="flex:1"></select><button class="btn sec sm" id="sVoiceT">${ms('play_arrow')}Послушать</button></div></div>
       </section>
       <section class="card"><h2 class="h-sm">Картина дня</h2>
         <div class="setrow"><div><div class="b-md" style="color:var(--on)">Рисовать нейросетью</div><div class="b-sm">Если выключить или лимит нейросети закончился, на открытке будут ваши фото в стиле дня</div></div>${sw('sAi', SET.ai)}</div>
@@ -1537,11 +1534,6 @@ function viewSettings(){
   toggle('sFx', on => { SET.fx = on; saveSet(); FX.on = on; if (on){ FX.id = null; applyTheme(latest()); } else { FX.list = []; FX.x?.clearRect(0, 0, FX.cv.width, FX.cv.height); } });
   toggle('sAi', on => { SET.ai = on; saveSet(); });
   toggle('sAuto', on => { SET.autoplay = on; saveSet(); });
-  const fill = () => { const vs = topVoices(), mode = voiceMode(), cur = pickVoice(), sel = $('#sVoice'); if (!sel) return;
-    sel.innerHTML = `<option value="__cloud" ${mode === 'cloud' ? 'selected' : ''}>Google — живой голос, через интернет${voiceScore(vs[0] || { name: '' }) < 95 ? ' (рекомендуем)' : ''}</option>` + vs.map(v => `<option value="${esc(v.name)}" ${mode === 'local' && cur && v.name === cur.name ? 'selected' : ''}>${esc(voiceLabel(v))}${voiceScore(v) >= 95 ? ' (рекомендуем)' : ''}</option>`).join(''); };
-  fill(); if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = fill;
-  $('#sVoice').onchange = e => { try { localStorage.setItem('aftertone.voice', e.target.value); } catch {} stopSpeech(); };
-  $('#sVoiceT').onclick = () => { const b = $('#sVoiceT'); if (speaking()){ stopSpeech(); return; } speakText('Сегодня был тихий вечер. Город светился мягко, и всё казалось чуть ближе.', on => b.innerHTML = on ? `${ms('stop')}Стоп` : `${ms('play_arrow')}Послушать`); };
   $('#aiTest').onclick = () => aiCheck($('#aiRes'));
   $('#sExp').onclick = exportDiary;
   if ($('#reset')) $('#reset').onclick = async e => { const b = e.currentTarget; if (!b.dataset.sure){ b.dataset.sure = 1; b.textContent = 'Точно? Ещё раз'; return; }
@@ -1906,7 +1898,7 @@ async function viewHome(){
         <span class="ovl" style="top:12px;left:12px">${ms('music_note')}<span>${esc(d.music.label || 'Саундтрек дня')}</span></span>
         <div class="row" style="position:absolute;z-index:2;left:12px;right:12px;bottom:12px"><span class="lb-md pri">${fmtLong(d.date)}</span><span class="ovl" style="position:static;background:color-mix(in oklab,var(--highest) 80%,transparent)">${ms(mood.icon, 1)}<span>${mood.label}</span></span></div></a>
         <div class="body"><h3 class="h-lg">${esc(d.title)}</h3><p class="b-md">${esc(d.description)}</p>
-          <div class="mini"><div class="row" style="gap:12px;justify-content:flex-start"><button class="ibtn" id="hv" aria-label="Озвучить запись"><span class="ms f">play_arrow</span></button><div><div class="lb-md pri">Озвучка дня</div><div class="lb-md mut" style="font-size:11px">голос: ${esc(d.vibe.voice.label)}</div></div></div><div class="wave">${bars}</div></div></div></article></section>
+          <div class="mini"><div class="row" style="gap:12px;justify-content:flex-start"><button class="ibtn" id="hv" aria-label="Включить звук дня"><span class="ms f">play_arrow</span></button><div><div class="lb-md pri">Звук дня</div><div class="lb-md mut" style="font-size:11px">саундтрек и ${esc(ambName(d)[0].toLowerCase())}</div></div></div><div class="wave">${bars}</div></div></div></article></section>
     </div><div class="col">
     ${SUPABASE_KEY && !USER ? `<a class="card row" href="#/login" style="gap:12px;justify-content:flex-start;background:color-mix(in oklab,var(--aura) 14%,var(--low))"><span class="ms" style="color:var(--aura)">cloud_sync</span><span class="b-sm" style="color:var(--on);flex:1">Войдите, чтобы дни сохранялись в облаке и были на всех устройствах</span><span class="ms">chevron_right</span></a>` : ''}
     <a class="card capture" href="#/new"><div style="min-width:0"><div class="row" style="justify-content:flex-start;gap:8px"><span class="ms f pri" style="font-size:18px">edit_note</span><span class="lb-md up" style="color:var(--onv);letter-spacing:.06em">Вечерняя запись</span></div>
@@ -1920,7 +1912,7 @@ async function viewHome(){
   renderWave();
   const x = $('#fc').getContext('2d');
   loop(t => { drawPhotoLayer(x, d, P, t, 0, 0, 1200, 900); drawGrain(x, P, t, 1200, 900); });
-  $('#hv').onclick = e => { e.preventDefault(); speak(d, on => { $('#hv').innerHTML = ms(on ? 'stop' : 'play_arrow', 1); }); };
+  $('#hv').onclick = e => { e.preventDefault(); if (SOUND && SOUND.day === d.id){ stopSoundtrack(); stopAmbient(); $('#hv').innerHTML = ms('play_arrow', 1); } else { unlockAudio(); startSoundtrack(d); startAmbient(d); $('#hv').innerHTML = ms('stop', 1); } };
   fillThumbs();
 }
 
@@ -2076,8 +2068,8 @@ async function viewDay(id){
         <div style="min-width:0"><div class="h-sm trunc">${sUrl || m.embed ? esc(m.label) : 'Саундтрек дня'}</div><div class="lb-md mut trunc">${sUrl ? (day.hasClip && !sessionFull.has(day.id) ? 'ваш трек • фрагмент 60 с' : 'ваш трек') : m.embed ? esc(m.service) : (m.label ? 'по мотивам: ' + esc(m.label) : 'сгенерирован под настроение')} • ${day.vibe.music.bpm} bpm${day.vibe.music.minor === true ? ' • минор' : day.vibe.music.minor === false ? ' • мажор' : ''}</div></div></div>
         ${m.url ? (isSearchUrl(m.url) ? `<a class="btn sec sm" href="${esc(m.url)}" target="_blank" rel="noopener" title="Ссылка ведёт на поиск песни">${ms('search')}Найти</a>` : `<a class="ibtn" href="${esc(m.url)}" target="_blank" rel="noopener" aria-label="Открыть в ${esc(m.service)}" title="Открыть в ${esc(m.service)}">${ms('open_in_new')}</a>`) : ''}</div>
       <div id="player"></div><p class="b-sm out" id="apHint" style="font-size:12px;margin-top:8px;display:none"></p></div>
-    <div class="player"><div class="lb-sm up out">Голос и атмосфера</div>
-      <div class="ctas" style="margin-top:10px"><button class="btn sec sm" id="bVoice">${ms('record_voice_over')}<span>Озвучка</span></button><button class="btn sec sm" id="bAmb">${ms(ambName(day)[1])}<span>${ambName(day)[0]}</span></button></div></div>
+    <div class="player"><div class="lb-sm up out">Атмосфера</div>
+      <div style="margin-top:10px"><button class="btn sec sm w" id="bAmb">${ms(ambName(day)[1])}<span>${ambName(day)[0]}</span></button></div></div>
     <div class="ctas"><button class="btn" id="bPng">${ms('download')}PNG</button><button class="btn sec" id="bVid">${ms('movie')}<span>Видео 15 с</span></button></div>
     <div id="vidSave"></div>
     <div class="ctas"><button class="btn sec sm" id="bRe">${ms('auto_fix_high')}Пересоздать дизайн</button><button class="btn sec sm" id="bDel">${ms('delete')}<span>Удалить</span></button></div>
@@ -2124,7 +2116,7 @@ async function viewDay(id){
       <div class="cell"><span class="lb">${ms('music_note')}Из песни</span><span class="b-md" style="color:var(--on)">${v.music.bpm} bpm${v.music.minor === true ? ', минор' : v.music.minor === false ? ', мажор' : ''}${v.music.genre ? ', ' + v.music.genre : ''}</span></div>`;
     $('#rules').innerHTML = v.rules.map(r => `<li>${ms('arrow_forward')}${esc(r)}</li>`).join('');
     $('#pal').innerHTML = [P.th.bg, P.th.accent, P.th.accent2, ...v.photo.colors.slice(0, 2)].map(c => `<div><i style="background:${c}"></i><span>${c}</span></div>`).join('');
-    $('#files').innerHTML = `<div><span>запись.txt</span><span>${day.text.split(/\s+/).length} слов</span></div><div><span>фото</span><span>${day.demo ? 3 : day.photos.length} шт.</span></div><div><span>песня</span><span>${m.source === 'none' ? 'без песни — саундтрек дня' : esc(m.service)}</span></div><div><span>картина</span><span>${day.art ? 'ИИ-генерация' + (day.artModel ? ' (' + esc(day.artModel) + ')' : '') : P.photoMode ? 'ваши фото в стиле дня' : 'нарисована системой'}, ${TECH[v.technique].name}</span></div><div><span>описание</span><span>${day.description.split(/\s+/).length} слов</span></div><div><span>озвучка</span><span>${esc(v.voice.label)}</span></div>`;
+    $('#files').innerHTML = `<div><span>запись.txt</span><span>${day.text.split(/\s+/).length} слов</span></div><div><span>фото</span><span>${day.demo ? 3 : day.photos.length} шт.</span></div><div><span>песня</span><span>${m.source === 'none' ? 'без песни — саундтрек дня' : esc(m.service)}</span></div><div><span>картина</span><span>${day.art ? 'ИИ-генерация' + (day.artModel ? ' (' + esc(day.artModel) + ')' : '') : P.photoMode ? 'ваши фото в стиле дня' : 'нарисована системой'}, ${TECH[v.technique].name}</span></div><div><span>описание</span><span>${day.description.split(/\s+/).length} слов</span></div>`;
   };
   side();
   const c = $('#pc'), x = c.getContext('2d');
@@ -2145,7 +2137,6 @@ async function viewDay(id){
     else if (!m.embed){ playSynth().then(ok => { if (!ok) hint('Браузер не дал включить музыку сам — нажмите ▶'); }); }
   }
   $('#bAmb').onclick = () => { const on = !AMB; if (on){ startAmbient(day); audioCtx().resume(); } else stopAmbient(); $('#bAmb').classList.toggle('on', on); $('span:first-child', $('#bAmb')).textContent = on ? 'stop_circle' : ambName(day)[1]; };
-  $('#bVoice').onclick = () => speak(day, on => { $('#bVoice').innerHTML = `${ms(on ? 'stop_circle' : 'record_voice_over')}<span>${on ? 'Остановить' : 'Озвучка'}</span>`; });
   $('#phs').innerHTML = P.raw.map((im, k) => { const cc = makeCanvas(300, 336); drawCover(cc.getContext('2d'), im, 0, 0, 300, 336, 1, 0, 0); return `<button class="tile zoom" data-k="${k}" aria-label="Открыть фото ${k + 1} на весь экран"><img src="${cc.toDataURL('image/jpeg', 0.8)}" alt="Фото ${k + 1}"><span class="ms zi">zoom_in</span></button>`; }).join('');
   $$('#phs .zoom').forEach(b => b.onclick = () => openPhotos(P.raw, +b.dataset.k, day.title));
   const png = () => c.toBlob(b => { if (b){ saveBlob(b, day.title + '.png'); toast('Картинка сохранена — проверьте загрузки'); } else toast('Не удалось сохранить картинку'); }, 'image/png');
@@ -2585,7 +2576,7 @@ async function route(hash){
   window.addEventListener('hashchange', onNav); window.addEventListener('popstate', onNav);
   if ('speechSynthesis' in window) speechSynthesis.getVoices();
   route();
-  sbInit(); probeTTS();
+  sbInit();
 })();
 </script>
 </body>
