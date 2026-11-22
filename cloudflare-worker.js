@@ -85,11 +85,36 @@ async function tts(url, request){
   return res;
 }
 
+/* ---------- Сколько нейронов потрачено сегодня ----------
+   Нужны две переменные воркера (Settings → Variables and Secrets):
+   CF_ACCOUNT_ID — ID аккаунта (текст), CF_API_TOKEN — API-токен с правом Account Analytics: Read (секрет).
+   Данные берутся из GraphQL Analytics API: aiInferenceAdaptiveGroups.sum.totalNeurons за текущие сутки UTC. */
+const DAILY_FREE = 10000;
+async function usage(env){
+  const reset = new Date(); reset.setUTCHours(24, 0, 0, 0);
+  if (!env.CF_API_TOKEN || !env.CF_ACCOUNT_ID) return Response.json({ error: 'not-configured', limit: DAILY_FREE, reset: reset.toISOString() }, { headers: cors });
+  const cache = caches.default, key = new Request('https://usage.cache/neurons');
+  const hit = await cache.match(key); if (hit) return new Response(hit.body, { headers: { ...cors, 'Content-Type': 'application/json' } });
+  const date = new Date().toISOString().slice(0, 10);
+  const query = `query($a:string!,$d:Date!){viewer{accounts(filter:{accountTag:$a}){aiInferenceAdaptiveGroups(limit:1,filter:{date_geq:$d,date_leq:$d}){count sum{totalNeurons}}}}}`;
+  try {
+    const r = await fetch('https://api.cloudflare.com/client/v4/graphql', { method: 'POST', headers: { Authorization: 'Bearer ' + env.CF_API_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify({ query, variables: { a: env.CF_ACCOUNT_ID, d: date } }) });
+    const j = await r.json();
+    if (j.errors && j.errors.length) return Response.json({ error: j.errors[0].message, limit: DAILY_FREE, reset: reset.toISOString() }, { status: 502, headers: cors });
+    const g = j?.data?.viewer?.accounts?.[0]?.aiInferenceAdaptiveGroups?.[0];
+    const used = Math.round(Number(g?.sum?.totalNeurons ?? 0)), body = JSON.stringify({ used, limit: DAILY_FREE, left: Math.max(0, DAILY_FREE - used), requests: g?.count ?? 0, reset: reset.toISOString() });
+    const res = new Response(body, { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60' } });
+    try { await cache.put(key, res.clone()); } catch {}
+    return res;
+  } catch (e) { return Response.json({ error: String(e.message || e), limit: DAILY_FREE, reset: reset.toISOString() }, { status: 502, headers: cors }); }
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
     const url = new URL(request.url);
     if (url.pathname.endsWith('/tts')) return tts(url, request);
+    if (url.pathname.endsWith('/usage')) return usage(env);
     if (request.method !== 'POST') return Response.json({ error: 'Only POST' }, { status: 405, headers: cors });
     try {
       const { prompt, text, style, photo, pano } = await request.json();

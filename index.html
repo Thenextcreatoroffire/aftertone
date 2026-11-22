@@ -39,6 +39,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .brand{font:700 15px var(--head);letter-spacing:.32em;color:var(--primary);display:inline-flex;align-items:center;gap:10px}
 .brand .logo{color:var(--aura);flex:none}
 .tact{display:flex;align-items:center;gap:2px}
+.neu{display:inline-flex;align-items:center;gap:2px;height:30px;padding:0 10px;margin-right:6px;border-radius:999px;background:color-mix(in oklab,var(--aura) 16%,transparent);color:var(--on);font:500 12px var(--body);white-space:nowrap;cursor:pointer}
+.neu .ms{font-size:15px;color:var(--aura)}
+.neu b{font-weight:700}
+.neu.low{background:color-mix(in oklab,#f0a33a 25%,transparent)}.neu.low .ms{color:#f0a33a}
+.neu.out{background:color-mix(in oklab,#e5534b 25%,transparent)}.neu.out .ms{color:#e5534b}
+@media (max-width:420px){.neu .nl{display:none}.neu{padding:0 8px;margin-right:2px}}
 .tnav{display:flex;align-items:center;margin-right:6px;padding-right:6px;border-right:1px solid color-mix(in oklab,var(--outv) 60%,transparent)}
 .ibtn.off{opacity:.3;pointer-events:none}
 .ibtn:hover{background:color-mix(in oklab,var(--on) 8%,transparent)}
@@ -940,10 +946,11 @@ async function generateAIImage(day, quiet){
   try {
     const r = await fetch(IMAGE_ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:imagePrompt(day), text:day.text, style:imageStyle(day), photo: await refPhoto(day)}), signal:ctl.signal});
     const j = await r.json().catch(() => ({}));
-    if (r.ok && j.image){ day.artModel = j.model || 'ИИ'; if (j.warnings && j.warnings.length) console.info('Воркер:', j.warnings); return await shrinkToJpeg(j.image); }
+    if (r.ok && j.image){ setTimeout(loadNeurons, 3000); day.artModel = j.model || 'ИИ'; if (j.warnings && j.warnings.length) console.info('Воркер:', j.warnings); return await shrinkToJpeg(j.image); }
     why = String(j.error || ('HTTP ' + r.status)); console.warn('Воркер не нарисовал картинку:', why);
   } catch (e) { why = String(e && (e.name === 'AbortError' ? 'timeout' : e.message || e)); console.warn(e); }
   finally { clearTimeout(tm); }
+  setTimeout(loadNeurons, 3000);
   if (!quiet) toast(`ИИ-картинка не получилась: ${aiWhy(why)}. На открытке ваши фото в стиле дня — позже можно нажать «Пересоздать дизайн».`, 6000);
   return null;
 }
@@ -1787,10 +1794,29 @@ function openPhotos(list, start = 0, title = ''){
   o.addEventListener('touchend', e => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 50 && srcs.length > 1) step(dx < 0 ? 1 : -1); x0 = null; }, { passive: true });
   show();
 }
+/* Нейроны Cloudflare на сегодня: воркер отдаёт /usage (нужны CF_ACCOUNT_ID и CF_API_TOKEN в его настройках) */
+let NEU = null;
+const nf = n => n.toLocaleString('ru-RU');
+function neuHTML(){
+  if (!NEU || NEU.error || typeof NEU.left !== 'number') return '';
+  const lvl = NEU.left <= 0 ? 'out' : NEU.left < 1500 ? 'low' : '', short = NEU.left >= 1000 ? (NEU.left/1000).toFixed(NEU.left >= 9950 ? 0 : 1).replace('.', ',') + 'k' : String(NEU.left);
+  return `<button class="neu ${lvl}" id="tNeu" title="Нейроны для ИИ-картинок на сегодня: осталось ${nf(NEU.left)} из ${nf(NEU.limit)}">${ms('bolt')}<span class="nl">ИИ:&nbsp;</span><b>${short}</b><span class="nl">&nbsp;/ ${NEU.limit/1000}k</span></button>`;
+}
+function paintNeu(){ const b = $('#tNeu'), h = neuHTML(); if (b){ if (!h) b.remove(); else b.outerHTML = h; } else if (h && $('.tact')) $('.tact').insertAdjacentHTML('afterbegin', h); bindNeu(); }
+function bindNeu(){ const b = $('#tNeu'); if (!b || !NEU) return; b.onclick = () => { const at = new Date(NEU.reset).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  toast(NEU.left > 0 ? `Нейроны Cloudflare на сегодня: потрачено ${nf(NEU.used)}, осталось ${nf(NEU.left)} из ${nf(NEU.limit)}. Лимит обновится в ${at}.` : `Нейроны на сегодня закончились — на открытках будут ваши фото. Лимит обновится в ${at}.`, 6000); }; }
+async function loadNeurons(){
+  if (!IMAGE_ENDPOINT) return;
+  try { const r = await fetch(IMAGE_ENDPOINT.replace(/\/?$/, '/') + 'usage', { cache: 'no-store' }); NEU = await r.json(); } catch { NEU = null; }
+  paintNeu();
+}
+setInterval(() => { if (!document.hidden) loadNeurons(); }, 90000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) loadNeurons(); });
 function topActions(extra = ''){
-  return `<div class="tact">${extra}<button class="ibtn" id="tSearch" aria-label="Поиск по дневнику" title="Поиск (Ctrl+K)">${ms('search')}</button><button class="ibtn" id="tMute" aria-label="${SET.muted ? 'Включить звук' : 'Выключить звук'}" title="${SET.muted ? 'Включить звук' : 'Выключить звук'}">${ms(SET.muted ? 'volume_off' : 'volume_up')}</button><button class="ibtn" id="me" aria-label="Профиль">${USER ? `<span class="ava sm">${esc(userName().slice(0, 1).toUpperCase())}</span>` : ms('person')}</button></div>`;
+  return `<div class="tact">${neuHTML()}${extra}<button class="ibtn" id="tSearch" aria-label="Поиск по дневнику" title="Поиск (Ctrl+K)">${ms('search')}</button><button class="ibtn" id="tMute" aria-label="${SET.muted ? 'Включить звук' : 'Выключить звук'}" title="${SET.muted ? 'Включить звук' : 'Выключить звук'}">${ms(SET.muted ? 'volume_off' : 'volume_up')}</button><button class="ibtn" id="me" aria-label="Профиль">${USER ? `<span class="ava sm">${esc(userName().slice(0, 1).toUpperCase())}</span>` : ms('person')}</button></div>`;
 }
 function bindTop(){
+  bindNeu();
   $('#tSearch').onclick = openSearch;
   $('#tMute').onclick = () => setMuted(!SET.muted);
   $('#me').onclick = () => {
@@ -2581,7 +2607,7 @@ async function route(hash){
   window.addEventListener('hashchange', onNav); window.addEventListener('popstate', onNav);
   if ('speechSynthesis' in window) speechSynthesis.getVoices();
   route();
-  sbInit();
+  sbInit(); loadNeurons();
 })();
 </script>
 </body>
